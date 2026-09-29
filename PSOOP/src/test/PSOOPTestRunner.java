@@ -92,6 +92,31 @@ public class PSOOPTestRunner {
         assertTrue(state.getHealth() == 100, "GameState reflects player health");
     }
 
+    public static void testStringHandlersAndUtilities() {
+        System.out.println("\n[PSOOP TEST 5] String Handlers, Array & Utilities...");
+        GameEngine engine = new GameEngine("ViperLead");
+
+        double[] lanes = engine.getSpawnLanes();
+        assertTrue(lanes.length == 5, "Spawn lanes array initialized with 5 positions");
+        assertTrue(lanes[0] == 100.0 && lanes[4] == 500.0, "Spawn lane boundaries correctly indexed");
+
+        model.GameState state = engine.getGameState();
+        String hud = state.getHudDisplayText();
+        assertTrue(hud.contains("SCORE: 0") && hud.contains("HP: 100"), "HUD display built using StringBuilder");
+
+        String summary = engine.getMissionSummary();
+        assertTrue(summary.contains("PILOT: ViperLead") && summary.contains("ACTIVE"), "Mission summary built using StringBuffer");
+
+        assertTrue(GameEngine.isWithinBounds(400.0, 300.0), "Static boundary check within bounds");
+        assertTrue(!GameEngine.isWithinBounds(-10.0, 300.0), "Static boundary check out of bounds");
+
+        engine.getEnemies().clear();
+        engine.getEnemies().add(new Enemy(301, "DroneFar", "DRONE", 500.0, 200.0, 20, 2.0, 50, 10));
+        engine.getEnemies().add(new Enemy(302, "DroneNear", "DRONE", 200.0, 200.0, 20, 2.0, 50, 10));
+        engine.sortEnemiesByDistance();
+        assertTrue(engine.getEnemies().get(0).getX() == 200.0, "Lambda comparator sorted enemies by distance");
+    }
+
     public static void main(String[] args) {
         System.out.println("=====================================================");
         System.out.println("   AIR STRIKER: PSOOP TEST SUITE (Java OOP)          ");
@@ -102,6 +127,7 @@ public class PSOOPTestRunner {
             testPlayerSubclassAndShieldMechanics();
             testEnemyAndBulletDynamics();
             testGameEngineFullSimulation();
+            testStringHandlersAndUtilities();
 
             System.out.println("\n=====================================================");
             System.out.println(String.format(">>> ALL %d/%d PSOOP JAVA TESTS PASSED SUCCESSFULLY! <<<",

@@ -60,6 +60,16 @@ public class GameState {
     public int getActiveEnemiesCount() { return activeEnemiesCount; }
     public void setActiveEnemiesCount(int activeEnemiesCount) { this.activeEnemiesCount = activeEnemiesCount; }
 
+    public String getHudDisplayText() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SCORE: ").append(score)
+          .append(" | HP: ").append(health)
+          .append(" | SHIELD: ").append(shield)
+          .append(" | WAVE: ").append(wave)
+          .append(" | LIVES: ").append(lives);
+        return sb.toString();
+    }
+
     @Override
     public String toString() {
         return String.format("[GAME STATE] Score=%d | HP=%d | Shield=%d | Wave=%d | Bullets=%d | Enemies=%d | Over=%b",

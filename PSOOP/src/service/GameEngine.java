@@ -14,6 +14,8 @@ public class GameEngine {
     public static final double SCREEN_MIN_Y = 0.0;
     public static final double SCREEN_MAX_Y = 600.0;
 
+    private static final double[] SPAWN_LANES = { 100.0, 200.0, 300.0, 400.0, 500.0 };
+
     private Player player;
     private List<Enemy> enemies;
     private List<Bullet> bullets;
@@ -36,10 +38,18 @@ public class GameEngine {
         this.running = true;
     }
 
+    public static boolean isWithinBounds(double x, double y) {
+        return x >= SCREEN_MIN_X && x <= SCREEN_MAX_X && y >= SCREEN_MIN_Y && y <= SCREEN_MAX_Y;
+    }
+
+    public double[] getSpawnLanes() {
+        return SPAWN_LANES;
+    }
+
     public void spawnWave(int count) {
         for (int i = 0; i < count; ++i) {
             double spawnX = 750.0 + (i * 60.0);
-            double spawnY = 100.0 + ((i * 110.0) % 400.0);
+            double spawnY = SPAWN_LANES[i % SPAWN_LANES.length];
             enemies.add(new Enemy(nextEnemyId++, "Drone-" + (i + 1), "DRONE",
                     spawnX, spawnY, 40, 2.5, 100, 20));
         }
@@ -124,6 +134,19 @@ public class GameEngine {
     public List<Bullet> getBullets() { return bullets; }
     public boolean isRunning() { return running; }
     public int getCurrentWave() { return currentWave; }
+
+    public void sortEnemiesByDistance() {
+        enemies.sort((e1, e2) -> Double.compare(e1.getX(), e2.getX()));
+    }
+
+    public String getMissionSummary() {
+        StringBuffer sb = new StringBuffer();
+        sb.append("MISSION STATUS: ").append(running ? "ACTIVE" : "GAME OVER");
+        sb.append(" | PILOT: ").append(player.getName());
+        sb.append(" | WAVE: ").append(currentWave);
+        sb.append(" | SCORE: ").append(player.getScore());
+        return sb.toString();
+    }
 
     public GameState getGameState() {
         GameState state = new GameState();
