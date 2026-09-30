@@ -1,5 +1,6 @@
 package model;
 
+// CO-2: Multilevel Inheritance (Fighter extends Enemy extends Character)
 public class Fighter extends Enemy {
     private int weaponDamage;
     private boolean evasionMode;
@@ -8,19 +9,23 @@ public class Fighter extends Enemy {
         this(200, "XenoFighter", 800.0, 300.0);
     }
 
-    public Fighter(int id, String name, double startX, double startY) {
+    public Fighter(final int id, final String name, final double startX, final double startY) {
+        // CO-2: Super constructor call
         super(id, name, "FIGHTER", startX, startY, 70, 2.5, 250, 30);
         this.weaponDamage = 20;
         this.evasionMode = false;
     }
 
-    public Fighter(int id, String name, double startX, double startY,
-                   int maxHealth, double speed, int scoreValue, int collisionDamage, int weaponDamage) {
+    public Fighter(final int id, final String name, final double startX, final double startY,
+                   final int maxHealth, final double speed, final int scoreValue,
+                   final int collisionDamage, final int weaponDamage) {
+        // CO-2: Super constructor call
         super(id, name, "FIGHTER", startX, startY, maxHealth, speed, scoreValue, collisionDamage);
         this.weaponDamage = Math.max(1, weaponDamage);
         this.evasionMode = false;
     }
 
+    // CO-2: Runtime Polymorphism - Method Overriding
     @Override
     public void move() {
         setX(getX() - getSpeed());
@@ -38,11 +43,11 @@ public class Fighter extends Enemy {
     }
 
     public int getWeaponDamage() { return weaponDamage; }
-    public void setWeaponDamage(int weaponDamage) { this.weaponDamage = Math.max(1, weaponDamage); }
-
+    public void setWeaponDamage(final int weaponDamage) { this.weaponDamage = Math.max(1, weaponDamage); }
     public boolean isEvasionMode() { return evasionMode; }
-    public void setEvasionMode(boolean evasionMode) { this.evasionMode = evasionMode; }
+    public void setEvasionMode(final boolean evasionMode) { this.evasionMode = evasionMode; }
 
+    // CO-2: Runtime Polymorphism - Method Overriding
     @Override
     public String toString() {
         return String.format("[FIGHTER: %s] Pos=(%.1f, %.1f) HP=%d WpnDmg=%d",

@@ -7,7 +7,7 @@
 AsteroidGridMatrix::AsteroidGridMatrix() : nextAsteroidID(500) { reset(); }
 
 // SR11 MATRIX INDEXING
-
+// drv
 void AsteroidGridMatrix::reset() {
   for (int r = 0; r < GRID_ROWS; ++r) {
     for (int c = 0; c < GRID_COLS; ++c) {
@@ -28,7 +28,7 @@ void AsteroidGridMatrix::reset() {
   }
 }
 
-// SR11 ASTEROID COND
+// NISHU- ASTEROID COND-location n boundry
 
 void AsteroidGridMatrix::generateProceduralWave(int waveNumber,
                                                 float worldWidth,
@@ -76,6 +76,7 @@ void AsteroidGridMatrix::generateProceduralWave(int waveNumber,
     }
   }
 }
+// drv-
 
 bool AsteroidGridMatrix::isValidCell(int row, int col) const {
   return (row >= 0 && row < GRID_ROWS && col >= 0 && col < GRID_COLS);
@@ -89,6 +90,7 @@ Asteroid &AsteroidGridMatrix::getAsteroid(int row, int col) {
   }
   return grid[row][col];
 }
+// sr11
 
 const Asteroid &AsteroidGridMatrix::getAsteroid(int row, int col) const {
   if (!isValidCell(row, col)) {
@@ -125,7 +127,7 @@ void AsteroidGridMatrix::updateField(float delta, float minX, float maxX) {
     }
   }
 }
-
+//-drv
 bool AsteroidGridMatrix::checkPointCollision(float px, float py, int &hitRow,
                                              int &hitCol) const {
   for (int r = 0; r < GRID_ROWS; ++r) {

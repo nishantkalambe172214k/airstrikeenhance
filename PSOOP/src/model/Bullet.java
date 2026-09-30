@@ -1,6 +1,8 @@
 package model;
 
-public class Bullet {
+// CO-2: Final Class (cannot be extended)
+public final class Bullet {
+    // CO-1: Encapsulation (private fields)
     private int id;
     private double x;
     private double y;
@@ -14,7 +16,10 @@ public class Bullet {
         this(0, 0.0, 0.0, 10.0, 0.0, 25, true);
     }
 
-    public Bullet(int id, double x, double y, double vx, double vy, int damage, boolean playerBullet) {
+    // CO-1: Parameterized Constructor & CO-2: Final parameters
+    public Bullet(final int id, final double x, final double y,
+                  final double vx, final double vy,
+                  final int damage, final boolean playerBullet) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -25,7 +30,8 @@ public class Bullet {
         this.playerBullet = playerBullet;
     }
 
-    public void update(double minX, double maxX, double minY, double maxY) {
+    // CO-1: Method with final parameters
+    public void update(final double minX, final double maxX, final double minY, final double maxY) {
         if (!active) return;
         this.x += this.vx;
         this.y += this.vy;
@@ -34,27 +40,21 @@ public class Bullet {
         }
     }
 
+    // CO-1: Getters and Setters
     public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
-
+    public void setId(final int id) { this.id = id; }
     public double getX() { return x; }
-    public void setX(double x) { this.x = x; }
-
+    public void setX(final double x) { this.x = x; }
     public double getY() { return y; }
-    public void setY(double y) { this.y = y; }
-
+    public void setY(final double y) { this.y = y; }
     public double getVx() { return vx; }
-    public void setVx(double vx) { this.vx = vx; }
-
+    public void setVx(final double vx) { this.vx = vx; }
     public double getVy() { return vy; }
-    public void setVy(double vy) { this.vy = vy; }
-
+    public void setVy(final double vy) { this.vy = vy; }
     public int getDamage() { return damage; }
-    public void setDamage(int damage) { this.damage = Math.max(1, damage); }
-
+    public void setDamage(final int damage) { this.damage = Math.max(1, damage); }
     public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
-
+    public void setActive(final boolean active) { this.active = active; }
     public boolean isPlayerBullet() { return playerBullet; }
-    public void setPlayerBullet(boolean playerBullet) { this.playerBullet = playerBullet; }
+    public void setPlayerBullet(final boolean playerBullet) { this.playerBullet = playerBullet; }
 }

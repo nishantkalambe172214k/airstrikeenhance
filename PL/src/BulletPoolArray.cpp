@@ -31,6 +31,7 @@ int BulletPoolArray::fireBullet(float x, float y, float vx, float vy,
   }
   return -1;
 }
+// drv -TRAVERSAL + BULLET POOL
 
 void BulletPoolArray::updateBullets(float minX, float maxX, float minY,
                                     float maxY) {
