@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "Bresenham.h"
 #include <cstdlib>
 #include <cmath>
 
@@ -382,3 +383,191 @@ void Renderer::renderGameOver(int finalScore, float screenW, float screenH) {
     drawBitmapString(boxX + 80.0f, boxY + 40.0f, GLUT_BITMAP_HELVETICA_12,
                      "PRESS [R] TO RESTART MISSION", 0.8f, 0.9f, 1.0f);
 }
+
+// ============================================================================
+// CO-2 PROCEDURAL ASTEROID & BRESENHAM GRAPHICS ROUTINES
+// ============================================================================
+
+// Procedurally renders a jagged, shaded rock asteroid with damage indicator cracking
+void Renderer::renderAsteroid(float x, float y, float radius, int health, int maxHealth) {
+    float hpRatio = (maxHealth > 0) ? (static_cast<float>(health) / static_cast<float>(maxHealth)) : 0.0f;
+    if (hpRatio < 0.0f) hpRatio = 0.0f;
+
+    // 10-vertex jagged rock profile relative to center
+    const int NUM_SECTORS = 10;
+    const float angles[NUM_SECTORS] = {
+        0.0f, 0.628f, 1.256f, 1.884f, 2.512f,
+        3.141f, 3.769f, 4.397f, 5.025f, 5.653f
+    };
+    const float radiusRatios[NUM_SECTORS] = {
+        1.0f, 0.82f, 1.08f, 0.90f, 1.15f,
+        0.85f, 1.05f, 0.78f, 1.12f, 0.92f
+    };
+
+    // Shading: rock grey, shifting toward glowing red magma when cracked/damaged
+    float rColor = 0.45f + (1.0f - hpRatio) * 0.45f;
+    float gColor = 0.40f * hpRatio;
+    float bColor = 0.35f * hpRatio;
+
+    // Solid filled rocky polygon
+    glBegin(GL_POLYGON);
+    glColor3f(rColor, gColor, bColor);
+    for (int i = 0; i < NUM_SECTORS; ++i) {
+        float r = radius * radiusRatios[i];
+        float px = x + r * std::cos(angles[i]);
+        float py = y + r * std::sin(angles[i]);
+        glVertex2f(px, py);
+    }
+    glEnd();
+
+    // Dark outline perimeter
+    glLineWidth(1.8f);
+    glBegin(GL_LINE_LOOP);
+    glColor3f(0.25f, 0.22f, 0.20f);
+    for (int i = 0; i < NUM_SECTORS; ++i) {
+        float r = radius * radiusRatios[i];
+        float px = x + r * std::cos(angles[i]);
+        float py = y + r * std::sin(angles[i]);
+        glVertex2f(px, py);
+    }
+    glEnd();
+
+    // Internal crater / fissure line using Bresenham Line
+    if (hpRatio < 0.75f) {
+        // Render crack lines with Bresenham Line algorithm
+        Bresenham::renderLine(static_cast<int>(x - radius * 0.4f), static_cast<int>(y - radius * 0.2f),
+                              static_cast<int>(x + radius * 0.3f), static_cast<int>(y + radius * 0.4f),
+                              1.0f, 0.3f, 0.1f, 0.9f, 1.8f);
+    }
+}
+
+// Renders an active tracking reticle over an enemy using Mid-point Bresenham Circle & Lines
+void Renderer::renderTargetingReticle(float targetX, float targetY, float radius, float lockOnPercent) {
+    int cx = static_cast<int>(targetX);
+    int cy = static_cast<int>(targetY);
+    int r = static_cast<int>(radius);
+
+    // Color pulses: green when searching/tracking, bright red/amber when locked on
+    float red = 0.2f + (0.8f * lockOnPercent);
+    float green = 0.9f * (1.0f - lockOnPercent * 0.5f);
+    float blue = 0.2f;
+
+    // 1. Outer target ring via Bresenham Circle
+    Bresenham::renderCircle(cx, cy, r, red, green, blue, 0.9f, 1.8f);
+
+    // 2. Crosshair spikes via Bresenham Line
+    int spike = 7;
+    Bresenham::renderLine(cx, cy + r, cx, cy + r + spike, red, green, blue, 1.0f, 2.0f);
+    Bresenham::renderLine(cx, cy - r, cx, cy - r - spike, red, green, blue, 1.0f, 2.0f);
+    Bresenham::renderLine(cx + r, cy, cx + r + spike, cy, red, green, blue, 1.0f, 2.0f);
+    Bresenham::renderLine(cx - r, cy, cx - r - spike, cy, red, green, blue, 1.0f, 2.0f);
+
+    // 3. Inner lock-on ring when lock progress > 50%
+    if (lockOnPercent > 0.5f) {
+        int innerR = static_cast<int>(radius * 0.5f);
+        Bresenham::renderCircle(cx, cy, innerR, 1.0f, 0.1f, 0.1f, 0.95f, 1.5f);
+    }
+}
+
+// Renders trajectory tracking laser lock line from ship to enemy target using Bresenham Line
+void Renderer::renderLockLine(float sourceX, float sourceY, float targetX, float targetY,
+                              float r, float g, float b, float a) {
+    Bresenham::renderLine(static_cast<int>(sourceX), static_cast<int>(sourceY),
+                          static_cast<int>(targetX), static_cast<int>(targetY),
+                          r, g, b, a, 1.2f);
+}
+
+// Renders player defensive plasma shield aura using concentric Bresenham Circles
+void Renderer::renderShieldRing(float playerX, float playerY, float radius, int shield, int maxShield) {
+    if (shield <= 0) return;
+
+    float ratio = (maxShield > 0) ? (static_cast<float>(shield) / static_cast<float>(maxShield)) : 0.0f;
+    int px = static_cast<int>(playerX);
+    int py = static_cast<int>(playerY);
+    int r = static_cast<int>(radius);
+
+    // Main shield boundary ring
+    Bresenham::renderCircle(px, py, r, 0.2f, 0.75f, 1.0f, 0.6f * ratio, 1.5f);
+
+    // Pulsating outer aura ring (dashed)
+    Bresenham::renderCircleDashed(px, py, r + 4, 8, 0.4f, 0.9f, 1.0f, 0.4f * ratio, 1.2f);
+}
+
+// Renders a high-tech circular radar minimap using Bresenham Circles, sweep Line, and entity blips
+void Renderer::renderRadarMinimap(float radarX, float radarY, float radarRadius, float sweepAngleRad,
+                                  float playerX, float playerY,
+                                  const std::vector<Point2D>& enemyPositions,
+                                  const std::vector<Point2D>& asteroidPositions,
+                                  float worldW, float worldH) {
+    int rx = static_cast<int>(radarX);
+    int ry = static_cast<int>(radarY);
+    int rad = static_cast<int>(radarRadius);
+
+    // 1. Semi-transparent dark circular radar backdrop
+    glBegin(GL_POLYGON);
+    glColor4f(0.02f, 0.06f, 0.10f, 0.85f);
+    for (int a = 0; a < 24; ++a) {
+        float angle = a * (6.2831853f / 24.0f);
+        glVertex2f(radarX + radarRadius * std::cos(angle), radarY + radarRadius * std::sin(angle));
+    }
+    glEnd();
+
+    // 2. Perimeter and mid-range range rings using Bresenham Circle
+    Bresenham::renderCircle(rx, ry, rad, 0.15f, 0.6f, 0.8f, 0.9f, 1.8f);
+    Bresenham::renderCircle(rx, ry, rad / 2, 0.10f, 0.4f, 0.6f, 0.5f, 1.0f);
+
+    // 3. Radar crosshairs using Bresenham Line
+    Bresenham::renderLine(rx - rad, ry, rx + rad, ry, 0.12f, 0.45f, 0.65f, 0.4f, 1.0f);
+    Bresenham::renderLine(rx, ry - rad, rx, ry + rad, 0.12f, 0.45f, 0.65f, 0.4f, 1.0f);
+
+    // 4. Rotating sweep scan line using Bresenham Line
+    int sweepEndX = rx + static_cast<int>(radarRadius * std::cos(sweepAngleRad));
+    int sweepEndY = ry + static_cast<int>(radarRadius * std::sin(sweepAngleRad));
+    Bresenham::renderLine(rx, ry, sweepEndX, sweepEndY, 0.2f, 0.9f, 0.4f, 0.8f, 1.5f);
+
+    // 5. Radar Blip Mapping (Transform world coords to radar local disk)
+    auto worldToRadar = [&](float wx, float wy) -> Point2D {
+        float normX = (wx / worldW) * 2.0f - 1.0f; // [-1, 1]
+        float normY = (wy / worldH) * 2.0f - 1.0f;
+        // Clamp to radar radius
+        float blipDist = std::sqrt(normX * normX + normY * normY);
+        if (blipDist > 0.9f) {
+            normX = (normX / blipDist) * 0.9f;
+            normY = (normY / blipDist) * 0.9f;
+        }
+        return { radarX + normX * (radarRadius * 0.85f), radarY + normY * (radarRadius * 0.85f) };
+    };
+
+    // Draw Asteroid blips (Amber points)
+    glPointSize(3.0f);
+    glColor3f(0.9f, 0.7f, 0.2f);
+    glBegin(GL_POINTS);
+    for (const auto& ast : asteroidPositions) {
+        Point2D b = worldToRadar(ast.x, ast.y);
+        glVertex2f(b.x, b.y);
+    }
+    glEnd();
+
+    // Draw Enemy blips (Crimson points)
+    glPointSize(4.0f);
+    glColor3f(1.0f, 0.2f, 0.2f);
+    glBegin(GL_POINTS);
+    for (const auto& enm : enemyPositions) {
+        Point2D b = worldToRadar(enm.x, enm.y);
+        glVertex2f(b.x, b.y);
+    }
+    glEnd();
+
+    // Draw Player blip (Cyan point at player position)
+    Point2D pBlip = worldToRadar(playerX, playerY);
+    glPointSize(5.0f);
+    glColor3f(0.2f, 0.9f, 1.0f);
+    glBegin(GL_POINTS);
+    glVertex2f(pBlip.x, pBlip.y);
+    glEnd();
+
+    // Label
+    drawBitmapString(radarX - 18.0f, radarY - radarRadius - 12.0f, GLUT_BITMAP_HELVETICA_10,
+                     "RADAR", 0.4f, 0.7f, 0.9f);
+}
+

@@ -60,6 +60,19 @@ public:
     void renderEnemyShip(float x, float y, float size, float angle = 0.0f, float scale = 1.0f);
     void renderLaserBolt(float x, float y, float length, float width, bool isPlayer = true, float angle = 0.0f);
 
+    // Asteroid Field Matrix Rendering (PL 2D Array)
+    void renderAsteroid(float x, float y, float radius, int health, int maxHealth);
+
+    // Mid-point Bresenham Algorithm Raster Primitives (CGL CO-2)
+    void renderTargetingReticle(float targetX, float targetY, float radius, float lockOnPercent = 1.0f);
+    void renderLockLine(float sourceX, float sourceY, float targetX, float targetY, float r, float g, float b, float a);
+    void renderShieldRing(float playerX, float playerY, float radius, int shield, int maxShield);
+    void renderRadarMinimap(float radarX, float radarY, float radarRadius, float sweepAngleRad,
+                            float playerX, float playerY,
+                            const std::vector<Point2D>& enemyPositions,
+                            const std::vector<Point2D>& asteroidPositions,
+                            float worldW, float worldH);
+
     // Heads-Up Display (HUD) and Overlays
     void renderHUD(int health, int maxHealth, int shield, int score, int wave, int activeBullets, int maxBullets, float screenW, float screenH);
     void renderGameOver(int finalScore, float screenW, float screenH);
