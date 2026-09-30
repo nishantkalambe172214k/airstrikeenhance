@@ -1,8 +1,11 @@
 package test;
 
+import model.Boss;
 import model.Bullet;
 import model.Character;
+import model.Drone;
 import model.Enemy;
+import model.Fighter;
 import model.Movable;
 import model.Player;
 import service.GameEngine;
@@ -117,6 +120,83 @@ public class PSOOPTestRunner {
         assertTrue(engine.getEnemies().get(0).getX() == 200.0, "Lambda comparator sorted enemies by distance");
     }
 
+    public static void testSubclassInheritanceHierarchy() {
+        System.out.println("\n[PSOOP TEST 6] Drone, Fighter, Boss Inheritance Hierarchy...");
+
+        // 1. Drone subclass tests
+        Drone drone = new Drone(401, "ScoutAlpha", 700.0, 300.0);
+        assertTrue(drone instanceof Enemy, "Drone inherits from Enemy");
+        assertTrue(drone instanceof Character, "Drone inherits from Character");
+        assertTrue(drone.getEnemyType().equals("DRONE"), "Drone enemyType is DRONE");
+        assertTrue(drone.getHealth() == 30, "Drone initialized with 30 HP");
+        assertTrue(drone.getSpeed() == 4.0, "Drone initialized with high scout speed (4.0)");
+
+        double startX = drone.getX();
+        drone.move();
+        assertTrue(drone.getX() == startX - 4.0, "Drone move updates X by speed");
+        assertTrue(drone.getY() != 300.0 || drone.getOscillationAmplitude() > 0, "Drone oscillates along Y-axis");
+
+        // 2. Fighter subclass tests
+        Fighter fighter = new Fighter(402, "InterceptorBravo", 750.0, 250.0);
+        assertTrue(fighter instanceof Enemy, "Fighter inherits from Enemy");
+        assertTrue(fighter instanceof Character, "Fighter inherits from Character");
+        assertTrue(fighter.getEnemyType().equals("FIGHTER"), "Fighter enemyType is FIGHTER");
+        assertTrue(fighter.getHealth() == 70, "Fighter initialized with 70 HP");
+        assertTrue(fighter.getWeaponDamage() == 20, "Fighter weaponDamage initialized to 20");
+
+        double fStartY = fighter.getY();
+        fighter.move();
+        assertTrue(fighter.getX() == 750.0 - 2.5, "Fighter move advances forward");
+        assertTrue(fighter.getY() == fStartY - 1.5, "Fighter move executes evasive vertical sweep");
+
+        // 3. Boss subclass tests
+        Boss boss = new Boss(501, "ColossusPrime", 780.0, 300.0);
+        assertTrue(boss instanceof Enemy, "Boss inherits from Enemy");
+        assertTrue(boss instanceof Character, "Boss inherits from Character");
+        assertTrue(boss.getEnemyType().equals("BOSS"), "Boss enemyType is BOSS");
+        assertTrue(boss.getHealth() == 300, "Boss initialized with 300 HP");
+        assertTrue(boss.getArmorRating() == 5, "Boss initialized with 5 armor rating");
+        assertTrue(boss.getPhase() == 1, "Boss starts in Phase 1");
+        assertTrue(!boss.isEnrageMode(), "Boss starts in normal mode (not enraged)");
+
+        // Armor mitigation test: 25 damage with 5 armor = 20 effective damage dealt
+        boss.takeDamage(25);
+        assertTrue(boss.getHealth() == 280, "Boss armor reduces incoming damage (300 - 20 = 280)");
+
+        // Enrage transition test: deal damage down to <= 40% health
+        boss.takeDamage(165); // 165 - 5 = 160 damage -> 280 - 160 = 120 (40% of 300)
+        assertTrue(boss.getHealth() == 120, "Boss health at 40% threshold");
+        assertTrue(boss.isEnrageMode(), "Boss transitions to Enrage Mode at <= 40% HP");
+        assertTrue(boss.getPhase() == 2, "Boss advances to Phase 2");
+        assertTrue(boss.getSpeed() == 1.5, "Boss speed increases in Enrage Mode");
+    }
+
+    public static void testPolymorphicEngineIntegration() {
+        System.out.println("\n[PSOOP TEST 7] Polymorphic Enemy Integration in GameEngine...");
+        GameEngine engine = new GameEngine("AcePilot");
+        engine.getEnemies().clear();
+
+        // Polymorphic list holding Drone, Fighter, Boss references via base Enemy type
+        engine.addEnemy(new Drone(601, "D-1", 700.0, 100.0));
+        engine.addEnemy(new Fighter(602, "F-1", 700.0, 200.0));
+        engine.addEnemy(new Boss(603, "B-1", 700.0, 300.0));
+
+        assertTrue(engine.getEnemies().size() == 3, "Engine holds 3 polymorphic enemies");
+
+        // Polymorphic movement execution
+        for (Enemy e : engine.getEnemies()) {
+            double prevX = e.getX();
+            e.move();
+            assertTrue(e.getX() < prevX, "Polymorphic move invoked correctly for " + e.getClass().getSimpleName());
+        }
+
+        // Test boss spawning helper
+        engine.spawnBoss();
+        assertTrue(engine.getEnemies().size() == 4, "Engine spawned additional Boss");
+        Enemy lastEnemy = engine.getEnemies().get(3);
+        assertTrue(lastEnemy instanceof Boss, "Spawned enemy is instance of Boss");
+    }
+
     public static void main(String[] args) {
         System.out.println("=====================================================");
         System.out.println("   AIR STRIKER: PSOOP TEST SUITE (Java OOP)          ");
@@ -128,6 +208,8 @@ public class PSOOPTestRunner {
             testEnemyAndBulletDynamics();
             testGameEngineFullSimulation();
             testStringHandlersAndUtilities();
+            testSubclassInheritanceHierarchy();
+            testPolymorphicEngineIntegration();
 
             System.out.println("\n=====================================================");
             System.out.println(String.format(">>> ALL %d/%d PSOOP JAVA TESTS PASSED SUCCESSFULLY! <<<",
@@ -140,3 +222,4 @@ public class PSOOPTestRunner {
         }
     }
 }
+

@@ -1,7 +1,10 @@
 package service;
 
+import model.Boss;
 import model.Bullet;
+import model.Drone;
 import model.Enemy;
+import model.Fighter;
 import model.GameState;
 import model.Player;
 
@@ -46,12 +49,32 @@ public class GameEngine {
         return SPAWN_LANES;
     }
 
+    public void addEnemy(Enemy enemy) {
+        if (enemy != null) {
+            enemies.add(enemy);
+        }
+    }
+
+    public void spawnBoss() {
+        enemies.add(new Boss(nextEnemyId++, "GigaDreadnought", 780.0, 300.0));
+    }
+
     public void spawnWave(int count) {
         for (int i = 0; i < count; ++i) {
             double spawnX = 750.0 + (i * 60.0);
             double spawnY = SPAWN_LANES[i % SPAWN_LANES.length];
-            enemies.add(new Enemy(nextEnemyId++, "Drone-" + (i + 1), "DRONE",
-                    spawnX, spawnY, 40, 2.5, 100, 20));
+
+            // Polymorphic wave composition using subclasses
+            if (currentWave >= 2 && i % 3 == 0) {
+                enemies.add(new Fighter(nextEnemyId++, "Fighter-" + (i + 1), spawnX, spawnY));
+            } else {
+                enemies.add(new Drone(nextEnemyId++, "Drone-" + (i + 1), spawnX, spawnY));
+            }
+        }
+
+        // Spawn a Boss on wave 3, 6, 9...
+        if (currentWave % 3 == 0) {
+            enemies.add(new Boss(nextEnemyId++, "Boss-W" + currentWave, 780.0, 300.0));
         }
     }
 

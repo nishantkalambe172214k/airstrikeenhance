@@ -46,6 +46,7 @@ void BulletPoolArray::updateBullets(float minX, float maxX, float minY,
     }
   }
 }
+// SR11 BULLET ARRAY BOUNDARY CHECK
 
 int BulletPoolArray::searchBullet(int bulletID) const {
   for (int i = 0; i < MAX_BULLETS; ++i) {

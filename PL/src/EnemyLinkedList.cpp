@@ -41,6 +41,8 @@ bool EnemyLinkedList::removeEnemy(int id) {
     return true;
   }
 
+  // SR11 LINKED LIST
+
   EnemyNode *prev = head;
   EnemyNode *curr = head->next;
   while (curr != nullptr) {
