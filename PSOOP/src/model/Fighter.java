@@ -25,7 +25,8 @@ public class Fighter extends Enemy {
         this.evasionMode = false;
     }
 
-    // CO-2: Runtime Polymorphism - Method Overriding
+    // CO-2: Runtime Polymorphism SR11
+    // UP DOWN MOVEMENT
     @Override
     public void move() {
         setX(getX() - getSpeed());

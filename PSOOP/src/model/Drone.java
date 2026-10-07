@@ -27,7 +27,8 @@ public class Drone extends Enemy {
         this.initialY = startY;
     }
 
-    // CO-2: Runtime Polymorphism - Method Overriding
+    // CO-2: Runtime Polymorphism SR11
+    // OSCILLATING MOVEMENT
     @Override
     public void move() {
         setX(getX() - getSpeed());

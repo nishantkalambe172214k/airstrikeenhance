@@ -18,15 +18,16 @@ public class Player extends Character {
         this.lives = 3;
     }
 
-    // CO-2: Runtime Polymorphism - Method Overriding
+    // CO-2: SR11
+
     @Override
     public void move() {
     }
 
     // CO-2: Compile-time Polymorphism - Method Overloading with final parameters
     public void move(final double dx, final double dy,
-                     final double minX, final double maxX,
-                     final double minY, final double maxY) {
+            final double minX, final double maxX,
+            final double minY, final double maxY) {
         double newX = getX() + (dx * getSpeed());
         double newY = getY() + (dy * getSpeed());
 
@@ -46,7 +47,8 @@ public class Player extends Character {
     // CO-2: Runtime Polymorphism - Method Overriding & Super method call
     @Override
     public int takeDamage(final int amount) {
-        if (amount <= 0) return 0;
+        if (amount <= 0)
+            return 0;
 
         int remainingDamage = amount;
         if (this.shield > 0) {
@@ -74,12 +76,29 @@ public class Player extends Character {
         return amount;
     }
 
-    public int getScore() { return score; }
-    public void setScore(final int score) { this.score = Math.max(0, score); }
-    public int getShield() { return shield; }
-    public void setShield(final int shield) { this.shield = Math.max(0, shield); }
-    public int getLives() { return lives; }
-    public void setLives(final int lives) { this.lives = Math.max(0, lives); }
+    public int getScore() {
+        return score;
+    }
+
+    public void setScore(final int score) {
+        this.score = Math.max(0, score);
+    }
+
+    public int getShield() {
+        return shield;
+    }
+
+    public void setShield(final int shield) {
+        this.shield = Math.max(0, shield);
+    }
+
+    public int getLives() {
+        return lives;
+    }
+
+    public void setLives(final int lives) {
+        this.lives = Math.max(0, lives);
+    }
 
     // CO-2: Runtime Polymorphism - Method Overriding
     @Override

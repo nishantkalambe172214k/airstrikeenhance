@@ -23,6 +23,8 @@ public class GameEngine {
     // CO-1: 1D Array for spatial lanes
     private static final double[] SPAWN_LANES = { 100.0, 200.0, 300.0, 400.0, 500.0 };
 
+    // dynamic method dispatch.
+
     private Player player;
     private List<Enemy> enemies;
     private List<Bullet> bullets;
@@ -121,7 +123,9 @@ public class GameEngine {
         enemies.add(new Boss(nextEnemyId++, "GigaDreadnought", 780.0, 300.0));
     }
 
-    // CO-1: Looping - Counted For loop & CO-2: Polymorphic instantiation
+    // Wave Spawning
+    // SR11
+
     public void spawnWave(final int count) {
         for (int i = 0; i < count; ++i) {
             final double spawnX = 750.0 + (i * 60.0);
@@ -140,8 +144,11 @@ public class GameEngine {
     }
 
     // CO-1: Looping - Do-While loop
+    // SR11
+
     public int spawnEnemiesBatch(final int count) {
-        if (count <= 0) return 0;
+        if (count <= 0)
+            return 0;
         int spawned = 0;
         do {
             final double spawnX = 750.0 + (spawned * 40.0);
@@ -152,7 +159,8 @@ public class GameEngine {
         return spawned;
     }
 
-    // CO-1: Looping - While loop
+    // Frame
+    // SR11
     public int advanceSimulationSteps(final int totalFrames) {
         int executedFrames = 0;
         while (executedFrames < totalFrames && running) {
@@ -163,28 +171,33 @@ public class GameEngine {
     }
 
     public void movePlayer(final double dx, final double dy) {
-        if (!player.isAlive()) return;
+        if (!player.isAlive())
+            return;
         player.move(dx, dy, SCREEN_MIN_X + 20.0, SCREEN_MAX_X - 50.0, SCREEN_MIN_Y + 20.0, SCREEN_MAX_Y - 20.0);
     }
 
     public Bullet fireBullet() {
-        if (!player.isAlive()) return null;
+        if (!player.isAlive())
+            return null;
         final Bullet bullet = new Bullet(nextBulletId++, player.getX() + 30.0, player.getY(), 12.0, 0.0, 25, true);
         bullets.add(bullet);
         return bullet;
     }
 
-    // CO-1: Looping - Enhanced For loop & CO-2: Lambda Expression (removeIf)
+    // SR11
+
     public void update() {
-        if (!running) return;
+        if (!running)
+            return;
 
         for (final Bullet b : bullets) {
             b.update(SCREEN_MIN_X, SCREEN_MAX_X, SCREEN_MIN_Y, SCREEN_MAX_Y);
         }
         bullets.removeIf(b -> !b.isActive());
 
-        for (final Enemy e : enemies) {
-            e.move(); // CO-2: Runtime Polymorphism - Dynamic dispatch
+        for (final Enemy e : enemies) { // enemy is a reference of Enemy class but actual object can be Drone, Fighter
+                                        // or Boss
+            e.move(); // actual obj ke accoriding move
         }
         enemies.removeIf(e -> !e.isActive());
 
@@ -205,10 +218,12 @@ public class GameEngine {
         final double playerHitRadius = 25.0;
 
         for (final Bullet b : bullets) {
-            if (!b.isActive()) continue;
+            if (!b.isActive())
+                continue;
 
             for (final Enemy e : enemies) {
-                if (!e.isActive()) continue;
+                if (!e.isActive())
+                    continue;
 
                 final double dx = Math.abs(b.getX() - e.getX());
                 final double dy = Math.abs(b.getY() - e.getY());
@@ -225,7 +240,8 @@ public class GameEngine {
         }
 
         for (final Enemy e : enemies) {
-            if (!e.isActive()) continue;
+            if (!e.isActive())
+                continue;
 
             final double dx = Math.abs(e.getX() - player.getX());
             final double dy = Math.abs(e.getY() - player.getY());
@@ -237,11 +253,25 @@ public class GameEngine {
         }
     }
 
-    public Player getPlayer() { return player; }
-    public List<Enemy> getEnemies() { return enemies; }
-    public List<Bullet> getBullets() { return bullets; }
-    public boolean isRunning() { return running; }
-    public int getCurrentWave() { return currentWave; }
+    public Player getPlayer() {
+        return player;
+    }
+
+    public List<Enemy> getEnemies() {
+        return enemies;
+    }
+
+    public List<Bullet> getBullets() {
+        return bullets;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public int getCurrentWave() {
+        return currentWave;
+    }
 
     // CO-2: Lambda Expression - Comparator
     public void sortEnemiesByDistance() {
@@ -250,7 +280,8 @@ public class GameEngine {
 
     // CO-2: Custom Functional Interface Lambda execution (EnemyAction)
     public void forEachActiveEnemy(final EnemyAction action) {
-        if (action == null) return;
+        if (action == null)
+            return;
         for (final Enemy e : enemies) {
             if (e.isActive()) {
                 action.execute(e);
@@ -258,9 +289,11 @@ public class GameEngine {
         }
     }
 
-    // CO-2: Custom Functional Interface Lambda execution with return value (ScoreCalculator)
+    // CO-2: Custom Functional Interface Lambda execution with return value
+    // (ScoreCalculator)
     public int calculateComboBonus(final int comboStreak, final ScoreCalculator calculator) {
-        if (calculator == null) return 0;
+        if (calculator == null)
+            return 0;
         final int bonus = calculator.calculate(player.getScore(), comboStreak);
         player.addScore(bonus);
         return bonus;
