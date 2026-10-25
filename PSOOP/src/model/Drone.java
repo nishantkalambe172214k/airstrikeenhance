@@ -27,8 +27,12 @@ public class Drone extends Enemy {
         this.initialY = startY;
     }
 
-    // CO-2: Runtime Polymorphism SR11
-    // OSCILLATING MOVEMENT
+    // ============================================================================
+    // CO-2 & CO-3: Dynamic Polymorphism (Runtime Method Overriding)
+    // CO-3: Combat System - Sinusoidal Oscillating Wave Movement
+    // Computes trigonometric Y displacement (initialY + sin(X * speed) * amplitude)
+    // while translating leftwards, creating unpredictable evasive aerial patterns.
+    // ============================================================================
     @Override
     public void move() {
         setX(getX() - getSpeed());

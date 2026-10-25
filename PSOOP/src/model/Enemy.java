@@ -1,6 +1,11 @@
 package model;
 
+// ============================================================================
 // CO-2: Inheritance (Enemy extends Character)
+// CO-3: Combat System - Hostile Combatant Base Archetype
+// Implements enemy-specific combat attributes (bounty score value, collision damage,
+// and polymorphic movement vector).
+// ============================================================================
 public class Enemy extends Character {
     private String enemyType;
     private int scoreValue;
@@ -21,7 +26,12 @@ public class Enemy extends Character {
         this.collisionDamage = Math.max(0, collisionDamage);
     }
 
-    // CO-2: Runtime Polymorphism - Method Overriding
+    // ============================================================================
+    // CO-2 & CO-3: Dynamic Polymorphism (Runtime Method Overriding)
+    // CO-3: Combat System - Hostile Linear Attack Trajectory
+    // Advances enemy vessel leftward across the combat sector by its speed,
+    // retiring the entity once it exits the left viewport perimeter (< -50.0).
+    // ============================================================================
     @Override
     public void move() {
         setX(getX() - getSpeed());

@@ -6,7 +6,7 @@ echo "===================================================================="
 
 # Compile PSOOP Java classes
 echo "[1/3] Building PSOOP Java Subsystem..."
-javac -d bin/psoop PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/test/*.java
+javac -d bin/psoop PSOOP/src/exception/*.java PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/ui/*.java PSOOP/src/test/*.java
 if [ $? -ne 0 ]; then
     echo "[ERROR] Failed to compile Java classes."
     exit 1

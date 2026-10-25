@@ -7,7 +7,7 @@ if not exist bin mkdir bin
 if not exist bin\psoop mkdir bin\psoop
 
 echo [1/3] Compiling Java...
-javac -d bin/psoop PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/test/*.java
+javac -d bin/psoop PSOOP/src/exception/*.java PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/ui/*.java PSOOP/src/test/*.java
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Java compilation failed.
     exit /b 1

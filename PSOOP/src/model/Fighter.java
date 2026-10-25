@@ -25,8 +25,12 @@ public class Fighter extends Enemy {
         this.evasionMode = false;
     }
 
-    // CO-2: Runtime Polymorphism SR11
-    // UP DOWN MOVEMENT
+    // ============================================================================
+    // CO-2 & CO-3: Dynamic Polymorphism (Runtime Method Overriding)
+    // CO-3: Combat System - Tactical Vertical Evasive Zig-Zag Movement
+    // Alternates between ascending and descending flight vectors upon encountering
+    // tactical altitude thresholds [100.0..500.0], mimicking intelligent dogfighting maneuvers.
+    // ============================================================================
     @Override
     public void move() {
         setX(getX() - getSpeed());

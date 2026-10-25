@@ -29,7 +29,14 @@ public class Boss extends Enemy {
         this.enrageMode = false;
     }
 
-    // CO-2: Runtime Polymorphism & Super method call (super.takeDamage)
+    // ============================================================================
+    // CO-2 & CO-3: Dynamic Polymorphism & Super Method Delegation (super.takeDamage)
+    // CO-3: Combat System - Armor Plate Mitigation & Phase 2 Enrage Transition
+    // 1. Armor Interception: incoming damage is reduced by armorRating (min 1 dmg).
+    // 2. Hull Degradation: residual damage passed to super.takeDamage().
+    // 3. Boss Phase Shift: When hull falls below 40%, enters Phase 2 Enrage mode,
+    //    boosting combat speed by 1.5x.
+    // ============================================================================
     @Override
     public int takeDamage(final int amount) {
         if (amount <= 0) return 0;
@@ -46,7 +53,12 @@ public class Boss extends Enemy {
         return damageDealt;
     }
 
-    // CO-2: Runtime Polymorphism - Method Overriding
+    // ============================================================================
+    // CO-2 & CO-3: Dynamic Polymorphism (Runtime Method Overriding)
+    // CO-3: Combat System - Two-Phase Boss Combat Patrol Kinematics
+    // Phase A: Advances onto battlefield until reaching battle station (X <= 600.0).
+    // Phase B: Locks into a continuous vertical scanning patrol, accelerating in enrage mode.
+    // ============================================================================
     @Override
     public void move() {
         if (getX() > 600.0) {

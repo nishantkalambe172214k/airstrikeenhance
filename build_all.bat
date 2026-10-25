@@ -28,7 +28,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [4/8] Compiling Problem Solving using OOP (PSOOP) Java Module...
-javac -d bin/psoop PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/test/*.java
+javac -d bin/psoop PSOOP/src/exception/*.java PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/ui/*.java PSOOP/src/test/*.java
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to compile PSOOP Java sources.
     exit /b 1

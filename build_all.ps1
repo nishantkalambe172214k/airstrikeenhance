@@ -19,7 +19,7 @@ g++ -std=c++11 -I./PL/src PL/src/AsteroidGridMatrix.cpp PL/tests/test_asteroid_g
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile PL asteroid grid matrix tests."; exit 1 }
 
 Write-Host "[4/8] Compiling Problem Solving using OOP (PSOOP) Java Module..." -ForegroundColor Yellow
-javac -d bin/psoop PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/test/*.java
+javac -d bin/psoop PSOOP/src/exception/*.java PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/ui/*.java PSOOP/src/test/*.java
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile PSOOP Java sources."; exit 1 }
 
 Write-Host "[5/8] Compiling Computer Organization & Architecture (COA) ALU Simulator..." -ForegroundColor Yellow

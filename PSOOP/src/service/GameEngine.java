@@ -1,5 +1,9 @@
 package service;
 
+import exception.GameException;
+import exception.GameOverException;
+import exception.InvalidEntityStateException;
+import exception.WeaponOverheatException;
 import model.Boss;
 import model.Bullet;
 import model.Drone;
@@ -9,9 +13,20 @@ import model.Fighter;
 import model.GameState;
 import model.Player;
 import model.ScoreCalculator;
+import model.WaveSquad;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 
 public class GameEngine {
     // CO-2: Static Final constants
@@ -23,11 +38,22 @@ public class GameEngine {
     // CO-1: 1D Array for spatial lanes
     private static final double[] SPAWN_LANES = { 100.0, 200.0, 300.0, 400.0, 500.0 };
 
-    // dynamic method dispatch.
+    // Java Collections Framework:
+    // List: bullets, enemies
+    // Map: enemyMap (O(1) ID lookup)
+    // Set: destroyedEnemyIds (ensures unique enemy elimination accounting)
+    // Queue: waveQueue (FIFO squad deployment pipeline)
+    // Deque: combatEventLog (rolling combat telemetry history)
+    private static final int MAX_LOG_CAPACITY = 20;
 
     private Player player;
     private List<Enemy> enemies;
     private List<Bullet> bullets;
+    private final Map<Integer, Enemy> enemyMap;
+    private final Set<Integer> destroyedEnemyIds;
+    private final Queue<WaveSquad> waveQueue;
+    private final Deque<String> combatEventLog;
+
     private int nextBulletId;
     private int nextEnemyId;
     private int currentWave;
@@ -41,10 +67,15 @@ public class GameEngine {
         this.player = new Player(1, pilotName, 100.0, 300.0);
         this.enemies = new ArrayList<>();
         this.bullets = new ArrayList<>();
+        this.enemyMap = new HashMap<>();
+        this.destroyedEnemyIds = new HashSet<>();
+        this.waveQueue = new LinkedList<>();
+        this.combatEventLog = new ArrayDeque<>();
         this.nextBulletId = 1;
         this.nextEnemyId = 100;
         this.currentWave = 1;
         this.running = true;
+        logEvent("[SYSTEM] AirStriker mission initialized for Pilot: " + player.getName());
     }
 
     // CO-2: Static helper methods
@@ -94,7 +125,18 @@ public class GameEngine {
         }
 
         enemies.add(enemy);
+        enemyMap.put(enemy.getId(), enemy);
         return enemy;
+    }
+
+    // Exception Handling: Validation method throwing unchecked InvalidEntityStateException
+    public Enemy spawnEnemyByTypeValidated(final String enemyType, final double x, final double y)
+            throws InvalidEntityStateException {
+        if (x < -150.0 || x > SCREEN_MAX_X + 600.0 || y < -50.0 || y > SCREEN_MAX_Y + 50.0) {
+            throw new InvalidEntityStateException("SPAWN_LOC",
+                    String.format("Target coordinate (%.1f, %.1f) is out of spawn sector bounds.", x, y));
+        }
+        return spawnEnemyByType(enemyType, x, y);
     }
 
     // CO-1: Control Statement - Switch-Case for difficulty multiplier
@@ -116,11 +158,14 @@ public class GameEngine {
     public void addEnemy(final Enemy enemy) {
         if (enemy != null) {
             enemies.add(enemy);
+            enemyMap.put(enemy.getId(), enemy);
         }
     }
 
     public void spawnBoss() {
-        enemies.add(new Boss(nextEnemyId++, "GigaDreadnought", 780.0, 300.0));
+        Boss boss = new Boss(nextEnemyId++, "GigaDreadnought", 780.0, 300.0);
+        enemies.add(boss);
+        enemyMap.put(boss.getId(), boss);
     }
 
     // Wave Spawning
@@ -131,16 +176,46 @@ public class GameEngine {
             final double spawnX = 750.0 + (i * 60.0);
             final double spawnY = SPAWN_LANES[i % SPAWN_LANES.length];
 
+            Enemy enemy;
             if (currentWave >= 2 && i % 3 == 0) {
-                enemies.add(new Fighter(nextEnemyId++, "Fighter-" + (i + 1), spawnX, spawnY));
+                enemy = new Fighter(nextEnemyId++, "Fighter-" + (i + 1), spawnX, spawnY);
             } else {
-                enemies.add(new Drone(nextEnemyId++, "Drone-" + (i + 1), spawnX, spawnY));
+                enemy = new Drone(nextEnemyId++, "Drone-" + (i + 1), spawnX, spawnY);
             }
+            enemies.add(enemy);
+            enemyMap.put(enemy.getId(), enemy);
         }
 
         if (currentWave % 3 == 0) {
-            enemies.add(new Boss(nextEnemyId++, "Boss-W" + currentWave, 780.0, 300.0));
+            Boss boss = new Boss(nextEnemyId++, "Boss-W" + currentWave, 780.0, 300.0);
+            enemies.add(boss);
+            enemyMap.put(boss.getId(), boss);
         }
+    }
+
+    // Java Collections Framework: Queue<WaveSquad> FIFO deployment pipeline
+    public void enqueueWaveSquad(final WaveSquad squad) {
+        if (squad != null) {
+            waveQueue.offer(squad);
+            logEvent(String.format("[QUEUE] Wave squad registered: %s", squad));
+        }
+    }
+
+    public WaveSquad pollNextSquad() {
+        return waveQueue.poll();
+    }
+
+    public boolean deployNextWaveSquad() {
+        WaveSquad squad = waveQueue.poll();
+        if (squad == null) return false;
+
+        logEvent(String.format("[DEPLOY] Deploying %dx %s from wave queue", squad.getCount(), squad.getEnemyType()));
+        for (int i = 0; i < squad.getCount(); i++) {
+            double spawnX = 750.0 + (i * 50.0);
+            double spawnY = squad.getInitialY() + (i * squad.getYSpacing());
+            spawnEnemyByType(squad.getEnemyType(), spawnX, spawnY);
+        }
+        return true;
     }
 
     // CO-1: Looping - Do-While loop
@@ -159,13 +234,34 @@ public class GameEngine {
         return spawned;
     }
 
-    // Frame
-    // SR11
+    // Frame Simulation
     public int advanceSimulationSteps(final int totalFrames) {
         int executedFrames = 0;
         while (executedFrames < totalFrames && running) {
             update();
             executedFrames++;
+        }
+        return executedFrames;
+    }
+
+    // Exception Handling: Robust simulation method demonstrating try-catch-finally
+    public int safeAdvanceSimulation(final int totalFrames) throws GameException {
+        if (totalFrames < 0) {
+            throw new GameException("ERR_INVALID_FRAMES", "Simulation step count cannot be negative: " + totalFrames);
+        }
+        int executedFrames = 0;
+        try {
+            while (executedFrames < totalFrames && running) {
+                update();
+                executedFrames++;
+            }
+        } catch (Exception e) {
+            logEvent("[FATAL] Simulation loop interrupted: " + e.getMessage());
+            throw new GameException("ERR_SIM_FAULT", "Exception occurred during simulation step", e);
+        } finally {
+            // Guaranteed cleanup and state logging
+            logEvent(String.format("[SIM_SYNC] Completed %d simulation frames. Enemies remaining: %d, Bullets: %d.",
+                    executedFrames, enemies.size(), bullets.size()));
         }
         return executedFrames;
     }
@@ -176,12 +272,30 @@ public class GameEngine {
         player.move(dx, dy, SCREEN_MIN_X + 20.0, SCREEN_MAX_X - 50.0, SCREEN_MIN_Y + 20.0, SCREEN_MAX_Y - 20.0);
     }
 
+    // Exception Handling: Checked weapon firing throwing custom exceptions
+    public Bullet fireBulletChecked() throws WeaponOverheatException, GameOverException {
+        if (!player.isAlive() && player.getLives() <= 0) {
+            throw new GameOverException(player.getScore(), currentWave);
+        }
+        Bullet bullet = player.fireWeaponChecked(nextBulletId++);
+        bullets.add(bullet);
+        logEvent(String.format("[FIRE] Plasma bolt #%d launched by %s (Heat: %.1f%%)",
+                bullet.getId(), player.getName(), player.getWeaponHeat()));
+        return bullet;
+    }
+
+    // Compatible wrapper for fireBullet handling exceptions gracefully
     public Bullet fireBullet() {
         if (!player.isAlive())
             return null;
-        final Bullet bullet = new Bullet(nextBulletId++, player.getX() + 30.0, player.getY(), 12.0, 0.0, 25, true);
-        bullets.add(bullet);
-        return bullet;
+        try {
+            return fireBulletChecked();
+        } catch (WeaponOverheatException | GameOverException e) {
+            logEvent("[WARN] " + e.getMessage());
+            final Bullet bullet = new Bullet(nextBulletId++, player.getX() + 30.0, player.getY(), 12.0, 0.0, 25, true);
+            bullets.add(bullet);
+            return bullet;
+        }
     }
 
     // SR11
@@ -190,42 +304,50 @@ public class GameEngine {
         if (!running)
             return;
 
-        for (final Bullet b : bullets) {
+        // Weapon heat cooling cycle (60 FPS delta)
+        player.coolWeapon(1.0 / 60.0);
+
+        // Java Collections: Iterator traversal over bullets with safe removal
+        Iterator<Bullet> bulletIt = bullets.iterator();
+        while (bulletIt.hasNext()) {
+            Bullet b = bulletIt.next();
             b.update(SCREEN_MIN_X, SCREEN_MAX_X, SCREEN_MIN_Y, SCREEN_MAX_Y);
+            if (!b.isActive()) {
+                bulletIt.remove();
+            }
         }
-        bullets.removeIf(b -> !b.isActive());
 
-        
-        // WITHOUT POLYMORPHISM (UGLY, FRAGILE CODE):
-        // for (Enemy e : enemies) {
-        //     if (e.getEnemyType().equals("DRONE")) {
-        //         // 10 lines of sine wave math
-        //     } else if (e.getEnemyType().equals("FIGHTER")) {
-        //         // 10 lines of zigzag evasion sweep math
-        //     } else if (e.getEnemyType().equals("BOSS")) {
-        //         // 10 lines of boss dreadnought patrol math
-        //     }
-        // }
-        //
-        // WITH RUNTIME POLYMORPHISM (CLEAN, SCALABLE OOP DESIGN):
-        // Each subclass (Drone, Fighter, Boss) overrides move(). Through Dynamic
-        
+        // Deploy from waveQueue if active enemies are low
+        if (!waveQueue.isEmpty() && enemies.size() < 3) {
+            deployNextWaveSquad();
+        }
 
-        
-        for (final Enemy e : enemies) {
+        // Java Collections: Iterator traversal over polymorphic enemies
+        Iterator<Enemy> enemyIt = enemies.iterator();
+        while (enemyIt.hasNext()) {
+            Enemy e = enemyIt.next();
             e.move(); // Dynamically dispatches to Drone.move(), Fighter.move(), or Boss.move()
+            if (!e.isActive()) {
+                if (!e.isAlive()) {
+                    destroyedEnemyIds.add(e.getId());
+                }
+                enemyMap.remove(e.getId());
+                enemyIt.remove();
+            }
         }
-        enemies.removeIf(e -> !e.isActive());
 
         resolveCollisions();
 
-        if (enemies.isEmpty()) {
+        if (enemies.isEmpty() && waveQueue.isEmpty()) {
             currentWave++;
+            logEvent("[WAVE] Advancing to Wave " + currentWave + "! Hostile squadron arriving.");
             spawnWave(3 + currentWave);
         }
 
         if (!player.isAlive() && player.getLives() <= 0) {
             running = false;
+            logEvent(String.format("[GAME OVER] Mission terminated for Pilot %s. Final Score: %d",
+                    player.getName(), player.getScore()));
         }
     }
 
@@ -248,7 +370,12 @@ public class GameEngine {
                     b.setActive(false);
                     e.takeDamage(b.getDamage());
                     if (!e.isAlive()) {
+                        // Java Collections: Set ensures unique tracking of defeated enemy IDs
+                        destroyedEnemyIds.add(e.getId());
+                        enemyMap.remove(e.getId());
                         player.addScore(e.getScoreValue());
+                        logEvent(String.format("[HIT] Hostile %s #%d neutralized! (+%d PTS)",
+                                e.getName(), e.getId(), e.getScoreValue()));
                     }
                     break;
                 }
@@ -264,7 +391,10 @@ public class GameEngine {
 
             if (dx < playerHitRadius && dy < playerHitRadius) {
                 e.setActive(false);
+                enemyMap.remove(e.getId());
                 player.takeDamage(e.getCollisionDamage());
+                logEvent(String.format("[COLLISION] Hull rammed by %s! Player HP: %d, Shield: %d",
+                        e.getName(), player.getHealth(), player.getShield()));
             }
         }
     }
@@ -281,12 +411,52 @@ public class GameEngine {
         return bullets;
     }
 
+    // Java Collections: Map lookup for enemy by ID (O(1))
+    public Enemy getEnemyById(final int id) {
+        return enemyMap.get(id);
+    }
+
+    public Map<Integer, Enemy> getEnemyMap() {
+        return Collections.unmodifiableMap(enemyMap);
+    }
+
+    // Java Collections: Set of destroyed enemy IDs
+    public Set<Integer> getDestroyedEnemyIds() {
+        return Collections.unmodifiableSet(destroyedEnemyIds);
+    }
+
+    // Java Collections: Queue of incoming waves
+    public Queue<WaveSquad> getWaveQueue() {
+        return waveQueue;
+    }
+
+    // Java Collections: Deque of combat telemetry events
+    public Deque<String> getCombatEventLog() {
+        return combatEventLog;
+    }
+
+    public void logEvent(final String message) {
+        if (message == null) return;
+        if (combatEventLog.size() >= MAX_LOG_CAPACITY) {
+            combatEventLog.pollFirst();
+        }
+        combatEventLog.offerLast(message);
+    }
+
     public boolean isRunning() {
         return running;
     }
 
+    public void setRunning(final boolean running) {
+        this.running = running;
+    }
+
     public int getCurrentWave() {
         return currentWave;
+    }
+
+    public void setCurrentWave(final int wave) {
+        this.currentWave = Math.max(1, wave);
     }
 
     // CO-2: Lambda Expression - Comparator

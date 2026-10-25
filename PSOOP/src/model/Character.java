@@ -1,6 +1,13 @@
 package model;
 
-// CO-2: Abstract Class implementing Interface
+import exception.InvalidEntityStateException;
+
+// ============================================================================
+// CO-2: Abstract Class & Interface Contract
+// CO-3: Combat System - Root Combatant Entity Implementing Movable Interface
+// Serves as the polymorphic base class for all combat vessels (Player and Enemy
+// subclasses), encapsulating spatial coordinates, health, speed, and combat status.
+// ============================================================================
 public abstract class Character implements Movable {
     // CO-1: Encapsulation (private fields)
     private int id;
@@ -29,7 +36,12 @@ public abstract class Character implements Movable {
         this.active = true;
     }
 
+    // ============================================================================
     // CO-1: Method with Control Statements (if-else)
+    // CO-3: Combat System - Base Hull Damage Resolution
+    // Applies incoming combat damage to hull health, clamping to remaining integrity
+    // and automatically deactivating entity if health drops to zero.
+    // ============================================================================
     public int takeDamage(int amount) {
         if (amount <= 0) return 0;
         int damageDealt = Math.min(this.health, amount);
@@ -40,7 +52,11 @@ public abstract class Character implements Movable {
         return damageDealt;
     }
 
+    // ============================================================================
     // CO-1: Method
+    // CO-3: Combat System - Hull Repair and Reactivation Mechanics
+    // Restores structural hull points up to maxHealth and reactivates entity if dead.
+    // ============================================================================
     public void heal(int amount) {
         if (amount <= 0) return;
         this.health = Math.min(this.maxHealth, this.health + amount);
@@ -92,6 +108,26 @@ public abstract class Character implements Movable {
     }
     public double getSpeed() { return speed; }
     public void setSpeed(double speed) { this.speed = Math.max(0, speed); }
+
+    // Exception Handling: Validation method throwing unchecked InvalidEntityStateException
+    public void validateState() throws InvalidEntityStateException {
+        if (id < 0) {
+            throw new InvalidEntityStateException(String.valueOf(id), "Entity ID cannot be negative.");
+        }
+        if (name == null || name.trim().isEmpty()) {
+            throw new InvalidEntityStateException(String.valueOf(id), "Entity callsign name cannot be empty.");
+        }
+        if (maxHealth <= 0) {
+            throw new InvalidEntityStateException(name, "Maximum health must be strictly greater than 0.");
+        }
+        if (health < 0 || health > maxHealth) {
+            throw new InvalidEntityStateException(name,
+                    String.format("Current health (%d) violates bounds [0, %d].", health, maxHealth));
+        }
+        if (Double.isNaN(x) || Double.isNaN(y)) {
+            throw new InvalidEntityStateException(name, "Entity coordinates contain NaN invalid floating-point values.");
+        }
+    }
 
     // CO-2: Runtime Polymorphism - Method Overriding
     @Override

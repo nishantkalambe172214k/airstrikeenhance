@@ -4,7 +4,7 @@ echo "   AIR STRIKER: 4-SUBJECT REAL-TIME BRIDGE VERIFICATION            "
 echo "===================================================================="
 
 # Compile Java
-javac -d bin/psoop PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/test/*.java
+javac -d bin/psoop PSOOP/src/exception/*.java PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/ui/*.java PSOOP/src/test/*.java
 if [ $? -ne 0 ]; then
     echo "[ERROR] Java compilation failed."
     exit 1
