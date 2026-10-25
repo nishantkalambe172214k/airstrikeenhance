@@ -15,7 +15,7 @@ fi
 # Compile CGL Integrated Game
 echo "[2/3] Building Native C++ Engine (CGL + PL + COA + NetworkBridge)..."
 g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src \
-    CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/NetworkBridge.cpp \
+    CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/src/NetworkBridge.cpp \
     PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp \
     COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp \
     -o bin/AirStriker -framework OpenGL -framework GLUT

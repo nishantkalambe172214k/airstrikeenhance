@@ -24,6 +24,9 @@ struct Point2D {
     float y;
 };
 
+class PixelBuffer;
+class Mesh3D;
+
 // Represents an individual star in the multi-tier parallax starfield
 struct Star {
     float x;
@@ -37,9 +40,16 @@ struct Star {
 class Renderer {
 private:
     std::vector<Star> stars;
+    bool useScanLineFill;
 
 public:
     Renderer();
+
+    // Scan-Line Polygon Fill Controls (CGL CO-3)
+    // [CGL CO-3] Toggle for genuine Scan-Line ET/AET fill algorithm vs OpenGL fallback
+    bool isScanLineFillEnabled() const { return useScanLineFill; }
+    void setScanLineFillEnabled(bool enabled) { useScanLineFill = enabled; }
+    void toggleScanLineFill() { useScanLineFill = !useScanLineFill; }
 
     // 2D Geometric Transformations (TRS Pipeline)
     static Point2D translatePoint(Point2D p, float tx, float ty);
@@ -76,6 +86,17 @@ public:
     // Heads-Up Display (HUD) and Overlays
     void renderHUD(int health, int maxHealth, int shield, int score, int wave, int activeBullets, int maxBullets, float screenW, float screenH);
     void renderGameOver(int finalScore, float screenW, float screenH);
+
+    // [CGL CO-3] Interactive Area-Fill (Flood-Fill & Boundary-Fill) Demonstration Overlay
+    void renderAreaFillDemoOverlay(int algorithmType, int shapeType, int filledPixelCount,
+                                   int colorIndex, const PixelBuffer& buffer,
+                                   float screenW, float screenH);
+
+    // [CGL CO-3] 3D Hangar Scene: 3D perspective viewing, lighting, model preview & inspection
+    void render3DHangarScene(int modelType, bool wireframe, float rotX, float rotY, float rotZ,
+                             float scale, const Mesh3D& shipMesh, const Mesh3D& asteroidMesh,
+                             int screenW, int screenH);
+
     static void drawBitmapString(float x, float y, void* font, const std::string& text, float r, float g, float b);
 };
 

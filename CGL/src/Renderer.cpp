@@ -1,9 +1,12 @@
 #include "Renderer.h"
 #include "Bresenham.h"
+#include "ScanLineFiller.h"
+#include "AreaFill.h"
+#include "Mesh3D.h"
 #include <cstdlib>
 #include <cmath>
 
-Renderer::Renderer() {
+Renderer::Renderer() : useScanLineFill(true) {
 }
 
 // ============================================================================
@@ -171,19 +174,23 @@ void Renderer::renderPlayerShip(float x, float y, float size, bool isAlive, floa
         glVertex2f(f3.x, f3.y);
     glEnd();
 
-    // 4. Cockpit canopy (cyan diamond polygon)
+    // 4. Cockpit canopy (cyan diamond polygon - CGL CO-3 Scan-Line Polygon Fill)
     Point2D c1 = transformPoint({ +size * 0.4f, 0.0f }, scale, scale, angle, x, y);
     Point2D c2 = transformPoint({ 0.0f, +size * 0.15f }, scale, scale, angle, x, y);
     Point2D c3 = transformPoint({ -size * 0.2f, 0.0f }, scale, scale, angle, x, y);
     Point2D c4 = transformPoint({ 0.0f, -size * 0.15f }, scale, scale, angle, x, y);
 
-    glBegin(GL_POLYGON);
-        glColor3f(0.7f, 0.95f, 1.0f);
-        glVertex2f(c1.x, c1.y);
-        glVertex2f(c2.x, c2.y);
-        glVertex2f(c3.x, c3.y);
-        glVertex2f(c4.x, c4.y);
-    glEnd();
+    if (useScanLineFill) {
+        ScanLineFiller::renderFilledPolygon({ c1, c2, c3, c4 }, 0.7f, 0.95f, 1.0f, 1.0f);
+    } else {
+        glBegin(GL_POLYGON);
+            glColor3f(0.7f, 0.95f, 1.0f);
+            glVertex2f(c1.x, c1.y);
+            glVertex2f(c2.x, c2.y);
+            glVertex2f(c3.x, c3.y);
+            glVertex2f(c4.x, c4.y);
+        glEnd();
+    }
 }
 
 // Renders enemy drone using aggressive crimson & amber geometric primitives:
@@ -228,13 +235,17 @@ void Renderer::renderEnemyShip(float x, float y, float size, float angle, float 
         Point2D c3 = transformPoint({ +size * 0.3f, 0.0f }, scale, scale, angle, x, y);
         Point2D c4 = transformPoint({ 0.0f, -size * 0.2f }, scale, scale, angle, x, y);
 
-        glBegin(GL_POLYGON);
-            glColor3f(1.0f, 0.15f, 0.15f); // Menacing crimson reactor core
-            glVertex2f(c1.x, c1.y);
-            glVertex2f(c2.x, c2.y);
-            glVertex2f(c3.x, c3.y);
-            glVertex2f(c4.x, c4.y);
-        glEnd();
+        if (useScanLineFill) {
+            ScanLineFiller::renderFilledPolygon({ c1, c2, c3, c4 }, 1.0f, 0.15f, 0.15f, 1.0f);
+        } else {
+            glBegin(GL_POLYGON);
+                glColor3f(1.0f, 0.15f, 0.15f); // Menacing crimson reactor core
+                glVertex2f(c1.x, c1.y);
+                glVertex2f(c2.x, c2.y);
+                glVertex2f(c3.x, c3.y);
+                glVertex2f(c4.x, c4.y);
+            glEnd();
+        }
         return;
     } else if (type == "FIGHTER") {
         // Fast interceptor fighter: violet/indigo swept wings with cyan sensor
@@ -268,13 +279,17 @@ void Renderer::renderEnemyShip(float x, float y, float size, float angle, float 
         Point2D c3 = transformPoint({ +size * 0.25f, 0.0f }, scale, scale, angle, x, y);
         Point2D c4 = transformPoint({ 0.0f, -size * 0.15f }, scale, scale, angle, x, y);
 
-        glBegin(GL_POLYGON);
-            glColor3f(0.1f, 0.9f, 0.95f); // Cyan sensor
-            glVertex2f(c1.x, c1.y);
-            glVertex2f(c2.x, c2.y);
-            glVertex2f(c3.x, c3.y);
-            glVertex2f(c4.x, c4.y);
-        glEnd();
+        if (useScanLineFill) {
+            ScanLineFiller::renderFilledPolygon({ c1, c2, c3, c4 }, 0.1f, 0.9f, 0.95f, 1.0f);
+        } else {
+            glBegin(GL_POLYGON);
+                glColor3f(0.1f, 0.9f, 0.95f); // Cyan sensor
+                glVertex2f(c1.x, c1.y);
+                glVertex2f(c2.x, c2.y);
+                glVertex2f(c3.x, c3.y);
+                glVertex2f(c4.x, c4.y);
+            glEnd();
+        }
         return;
     }
 
@@ -305,19 +320,23 @@ void Renderer::renderEnemyShip(float x, float y, float size, float angle, float 
         glVertex2f(b3.x, b3.y);
     glEnd();
 
-    // 3. Energy core canopy (amber polygon)
+    // 3. Energy core canopy (amber polygon - CGL CO-3 Scan-Line Filled)
     Point2D c1 = transformPoint({ -size * 0.2f, 0.0f }, scale, scale, angle, x, y);
     Point2D c2 = transformPoint({ 0.0f, +size * 0.12f }, scale, scale, angle, x, y);
     Point2D c3 = transformPoint({ +size * 0.2f, 0.0f }, scale, scale, angle, x, y);
     Point2D c4 = transformPoint({ 0.0f, -size * 0.12f }, scale, scale, angle, x, y);
 
-    glBegin(GL_POLYGON);
-        glColor3f(1.0f, 0.8f, 0.2f);
-        glVertex2f(c1.x, c1.y);
-        glVertex2f(c2.x, c2.y);
-        glVertex2f(c3.x, c3.y);
-        glVertex2f(c4.x, c4.y);
-    glEnd();
+    if (useScanLineFill) {
+        ScanLineFiller::renderFilledPolygon({ c1, c2, c3, c4 }, 1.0f, 0.8f, 0.2f, 1.0f);
+    } else {
+        glBegin(GL_POLYGON);
+            glColor3f(1.0f, 0.8f, 0.2f);
+            glVertex2f(c1.x, c1.y);
+            glVertex2f(c2.x, c2.y);
+            glVertex2f(c3.x, c3.y);
+            glVertex2f(c4.x, c4.y);
+        glEnd();
+    }
 }
 
 // Renders an oriented laser projectile quad (cyan for player, red for enemy)
@@ -496,16 +515,28 @@ void Renderer::renderAsteroid(float x, float y, float radius, int health, int ma
     float gColor = 0.40f * hpRatio;
     float bColor = 0.35f * hpRatio;
 
-    // Solid filled rocky polygon
-    glBegin(GL_POLYGON);
-    glColor3f(rColor, gColor, bColor);
+    // Build 10-vertex irregular rock polygon
+    std::vector<Point2D> rockVertices;
+    rockVertices.reserve(NUM_SECTORS);
     for (int i = 0; i < NUM_SECTORS; ++i) {
         float r = radius * radiusRatios[i];
         float px = x + r * std::cos(angles[i]);
         float py = y + r * std::sin(angles[i]);
-        glVertex2f(px, py);
+        rockVertices.push_back({ px, py });
     }
-    glEnd();
+
+    // CGL CO-3: Genuine Scan-Line Polygon Filling (Edge Table & Active Edge Table Spans)
+    if (useScanLineFill) {
+        ScanLineFiller::renderFilledPolygon(rockVertices, rColor, gColor, bColor, 1.0f);
+    } else {
+        // Fallback: OpenGL GPU polygon rasterizer
+        glBegin(GL_POLYGON);
+        glColor3f(rColor, gColor, bColor);
+        for (const auto& v : rockVertices) {
+            glVertex2f(v.x, v.y);
+        }
+        glEnd();
+    }
 
     // Dark outline perimeter
     glLineWidth(1.8f);
@@ -657,4 +688,294 @@ void Renderer::renderRadarMinimap(float radarX, float radarY, float radarRadius,
     drawBitmapString(radarX - 18.0f, radarY - radarRadius - 12.0f, GLUT_BITMAP_HELVETICA_10,
                      "RADAR", 0.4f, 0.7f, 0.9f);
 }
+
+// ============================================================================
+// [CGL CO-3] INTERACTIVE AREA-FILL DEMONSTRATOR OVERLAY
+// Real-time visual comparison of iterative 4-connected Flood-Fill and Boundary-Fill
+// on Bresenham circles and irregular polygons rendered to an off-screen PixelBuffer.
+// ============================================================================
+void Renderer::renderAreaFillDemoOverlay(int algorithmType, int shapeType, int filledPixelCount,
+                                         int colorIndex, const PixelBuffer& buffer,
+                                         float screenW, float screenH) {
+    // 1. Semi-transparent backdrop to obscure live gameplay
+    glBegin(GL_QUADS);
+        glColor4f(0.02f, 0.04f, 0.08f, 0.88f);
+        glVertex2f(0.0f, 0.0f);
+        glVertex2f(screenW, 0.0f);
+        glVertex2f(screenW, screenH);
+        glVertex2f(0.0f, screenH);
+    glEnd();
+
+    // 2. Main modal inspection panel
+    float panelW = 660.0f;
+    float panelH = 430.0f;
+    float panelX = (screenW - panelW) * 0.5f;
+    float panelY = (screenH - panelH) * 0.5f;
+
+    // Panel background
+    glBegin(GL_QUADS);
+        glColor4f(0.05f, 0.09f, 0.16f, 0.96f);
+        glVertex2f(panelX, panelY);
+        glVertex2f(panelX + panelW, panelY);
+        glVertex2f(panelX + panelW, panelY + panelH);
+        glVertex2f(panelX, panelY + panelH);
+    glEnd();
+
+    // Panel outer glow border
+    glLineWidth(2.0f);
+    glBegin(GL_LINE_LOOP);
+        glColor3f(0.0f, 0.8f, 1.0f);
+        glVertex2f(panelX, panelY);
+        glVertex2f(panelX + panelW, panelY);
+        glVertex2f(panelX + panelW, panelY + panelH);
+        glVertex2f(panelX, panelY + panelH);
+    glEnd();
+
+    // Header bar
+    float headerH = 42.0f;
+    glBegin(GL_QUADS);
+        glColor4f(0.08f, 0.15f, 0.28f, 1.0f);
+        glVertex2f(panelX, panelY + panelH - headerH);
+        glVertex2f(panelX + panelW, panelY + panelH - headerH);
+        glVertex2f(panelX + panelW, panelY + panelH);
+        glVertex2f(panelX, panelY + panelH);
+    glEnd();
+
+    drawBitmapString(panelX + 20.0f, panelY + panelH - 26.0f, GLUT_BITMAP_HELVETICA_18,
+                     "AIR STRIKER: CG CO-3 ALGORITHM DEMONSTRATOR", 0.3f, 0.95f, 1.0f);
+    drawBitmapString(panelX + panelW - 180.0f, panelY + panelH - 26.0f, GLUT_BITMAP_HELVETICA_12,
+                     "ITERATIVE 4-CONNECTED", 0.4f, 0.9f, 0.5f);
+
+    // 3. Left Side: Off-screen Pixel Buffer Canvas
+    float canvasX = panelX + 30.0f;
+    float canvasY = panelY + 50.0f;
+    float pixelScale = 2.0f; // 120 x 2 = 240px wide canvas
+
+    // Canvas background
+    glBegin(GL_QUADS);
+        glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+        glVertex2f(canvasX, canvasY);
+        glVertex2f(canvasX + 240.0f, canvasY);
+        glVertex2f(canvasX + 240.0f, canvasY + 240.0f);
+        glVertex2f(canvasX, canvasY + 240.0f);
+    glEnd();
+
+    // Render the actual off-screen pixel buffer contents
+    buffer.render(canvasX, canvasY, pixelScale);
+
+    // Canvas boundary frame
+    glLineWidth(1.5f);
+    glBegin(GL_LINE_LOOP);
+        glColor3f(0.2f, 0.7f, 0.9f);
+        glVertex2f(canvasX, canvasY);
+        glVertex2f(canvasX + 240.0f, canvasY);
+        glVertex2f(canvasX + 240.0f, canvasY + 240.0f);
+        glVertex2f(canvasX, canvasY + 240.0f);
+    glEnd();
+
+    // Canvas caption
+    drawBitmapString(canvasX + 15.0f, canvasY + 248.0f, GLUT_BITMAP_HELVETICA_10,
+                     "PIXEL BUFFER: 120x120 RASTER GRID (2X MAGNIFICATION)", 0.6f, 0.8f, 0.95f);
+
+    // 4. Right Side: Algorithm Telemetry & Mathematical Diagnostics
+    float infoX = panelX + 300.0f;
+    float infoY = panelY + panelH - 75.0f;
+
+    drawBitmapString(infoX, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "ALGORITHM MODE:", 0.9f, 0.9f, 1.0f);
+    std::string algoName = (algorithmType == 0) ? "[1] BOUNDARY-FILL 4-CONNECTED" : "[2] FLOOD-FILL 4-CONNECTED";
+    float algoR = (algorithmType == 0) ? 0.2f : 0.95f;
+    float algoG = (algorithmType == 0) ? 0.95f : 0.85f;
+    float algoB = (algorithmType == 0) ? 0.95f : 0.2f;
+    drawBitmapString(infoX + 140.0f, infoY, GLUT_BITMAP_HELVETICA_12, algoName, algoR, algoG, algoB);
+
+    infoY -= 30.0f;
+    drawBitmapString(infoX, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "ENCLOSED SHAPE:", 0.9f, 0.9f, 1.0f);
+    std::string shapeName = (shapeType == 0) ? "[3] BRESENHAM CIRCLE (SHIELD)" : "[3] 10-VERTEX ASTEROID ROCK";
+    drawBitmapString(infoX + 140.0f, infoY, GLUT_BITMAP_HELVETICA_12, shapeName, 0.4f, 0.85f, 1.0f);
+
+    infoY -= 30.0f;
+    drawBitmapString(infoX, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "SEED COORDINATES:", 0.7f, 0.75f, 0.85f);
+    drawBitmapString(infoX + 160.0f, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "(60, 60) [Interior Center]", 0.3f, 0.95f, 0.5f);
+
+    infoY -= 25.0f;
+    drawBitmapString(infoX, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "BOUNDARY COLOR:", 0.7f, 0.75f, 0.85f);
+    std::string bColorText = (shapeType == 0) ? "SHIELD-BLUE (0, 190, 255)" : "ASTEROID-BROWN (130, 90, 65)";
+    drawBitmapString(infoX + 160.0f, infoY, GLUT_BITMAP_HELVETICA_12, bColorText, 0.85f, 0.7f, 0.3f);
+
+    infoY -= 25.0f;
+    drawBitmapString(infoX, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "FILL COLOR PALETTE:", 0.7f, 0.75f, 0.85f);
+    const char* colorNames[] = { "CYAN", "YELLOW", "GREEN", "RED" };
+    drawBitmapString(infoX + 160.0f, infoY, GLUT_BITMAP_HELVETICA_12,
+                     std::string("[C] ") + colorNames[colorIndex % 4], 0.95f, 0.95f, 0.4f);
+
+    infoY -= 25.0f;
+    drawBitmapString(infoX, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "PIXELS RASTERIZED:", 0.7f, 0.75f, 0.85f);
+    drawBitmapString(infoX + 160.0f, infoY, GLUT_BITMAP_HELVETICA_12,
+                     std::to_string(filledPixelCount) + " PIXELS", 0.2f, 0.95f, 0.4f);
+
+    infoY -= 25.0f;
+    drawBitmapString(infoX, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "CONTAINMENT CHECK:", 0.7f, 0.75f, 0.85f);
+    drawBitmapString(infoX + 160.0f, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "100% (STOPS AT BOUNDARY)", 0.3f, 0.95f, 0.9f);
+
+    infoY -= 25.0f;
+    drawBitmapString(infoX, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "STACK SAFETY:", 0.7f, 0.75f, 0.85f);
+    drawBitmapString(infoX + 160.0f, infoY, GLUT_BITMAP_HELVETICA_12,
+                     "ITERATIVE (O(W*H) BOUNDED)", 0.4f, 0.9f, 0.6f);
+
+    // 5. Bottom Controls Bar
+    float bottomY = panelY + 16.0f;
+    drawBitmapString(panelX + 25.0f, bottomY, GLUT_BITMAP_HELVETICA_10,
+                     "[1] Boundary-Fill  |  [2] Flood-Fill  |  [3] Toggle Shape  |  [C] Color  |  [SPACE] Re-Fill  |  [M] Return to Game",
+                     0.4f, 0.9f, 1.0f);
+}
+
+// ============================================================================
+// [CGL CO-3] 3D HANGAR SCENE & CUSTOM OBJECT INSPECTION
+// Course Outcome 3: Develop 3D objects using algorithms.
+// - Sets up 3D perspective frustum (gluPerspective) and enables depth buffer.
+// - Positions camera (gluLookAt) and draws 3D environment grid and pedestal.
+// - Applies affine transformations (TRS: Scale -> Rotate -> Translate).
+// - Restores 2D orthographic projection for HUD text rendering.
+// ============================================================================
+void Renderer::render3DHangarScene(int modelType, bool wireframe, float rotX, float rotY, float rotZ,
+                                   float scale, const Mesh3D& shipMesh, const Mesh3D& asteroidMesh,
+                                   int screenW, int screenH) {
+    // [CGL CO-3] Step 1: Configure 3D perspective viewing and enable GL_DEPTH_TEST
+    Camera3D::setupPerspective(screenW, screenH, 45.0f, 0.1f, 1000.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // 2. Camera Positioning (Looking from front-high toward origin)
+    gluLookAt(0.0, 1.4, 7.5,
+              0.0, 0.0, 0.0,
+              0.0, 1.0, 0.0);
+
+    // 3. Render 3D Space Hangar Environment (Grid floor & holographic pedestal)
+    glBegin(GL_LINES);
+    glColor4f(0.08f, 0.22f, 0.38f, 0.5f);
+    for (float gz = -10.0f; gz <= 10.0f; gz += 1.0f) {
+        glVertex3f(-10.0f, -2.6f, gz);
+        glVertex3f( 10.0f, -2.6f, gz);
+    }
+    for (float gx = -10.0f; gx <= 10.0f; gx += 1.0f) {
+        glVertex3f(gx, -2.6f, -10.0f);
+        glVertex3f(gx, -2.6f,  10.0f);
+    }
+    glEnd();
+
+    // Holographic pedestal ring at (0, -2.58, 0)
+    glBegin(GL_LINE_LOOP);
+    glColor4f(0.0f, 0.8f, 1.0f, 0.8f);
+    for (int a = 0; a < 32; ++a) {
+        float angle = a * (6.2831853f / 32.0f);
+        glVertex3f(3.2f * std::cos(angle), -2.58f, 3.2f * std::sin(angle));
+    }
+    glEnd();
+
+    // 4. Render Active 3D Model with Affine Transformations
+    glPushMatrix();
+        // Model positioning & orientation (TRS Order: Scale -> Rotate -> Translate)
+        glTranslatef(0.0f, 0.0f, 0.0f);
+        glRotatef(rotX, 1.0f, 0.0f, 0.0f);
+        glRotatef(rotY, 0.0f, 1.0f, 0.0f);
+        glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
+        glScalef(scale, scale, scale);
+
+        const Mesh3D& currentMesh = (modelType == 0) ? shipMesh : asteroidMesh;
+        if (wireframe) {
+            currentMesh.renderWireframe(0.0f, 0.95f, 1.0f, 1.6f);
+        } else {
+            currentMesh.renderFilledWithWireframe(Color3D(0.06f, 0.12f, 0.22f), 1.2f);
+        }
+    glPopMatrix();
+
+    // 5. Restore 2D Orthographic Projection for HUD Overlay & Telemetry
+    Camera3D::restore2DProjection(screenW, screenH);
+
+    // 6. 2D Hangar Telemetry Banner & On-Screen Diagnostics
+    // Top banner
+    glBegin(GL_QUADS);
+        glColor4f(0.05f, 0.09f, 0.16f, 0.85f);
+        glVertex2f(0.0f, static_cast<float>(screenH));
+        glVertex2f(static_cast<float>(screenW), static_cast<float>(screenH));
+        glVertex2f(static_cast<float>(screenW), static_cast<float>(screenH - 52));
+        glVertex2f(0.0f, static_cast<float>(screenH - 52));
+    glEnd();
+
+    glLineWidth(1.5f);
+    glBegin(GL_LINES);
+        glColor3f(0.0f, 0.8f, 1.0f);
+        glVertex2f(0.0f, static_cast<float>(screenH - 52));
+        glVertex2f(static_cast<float>(screenW), static_cast<float>(screenH - 52));
+    glEnd();
+
+    drawBitmapString(20.0f, static_cast<float>(screenH - 26), GLUT_BITMAP_HELVETICA_18,
+                     "AIR STRIKER: 3D HANGAR & MODEL INSPECTOR (CG CO-3)", 0.3f, 0.95f, 1.0f);
+    drawBitmapString(static_cast<float>(screenW - 240), static_cast<float>(screenH - 26), GLUT_BITMAP_HELVETICA_12,
+                     "GL_DEPTH_TEST: ENABLED", 0.3f, 0.95f, 0.4f);
+    drawBitmapString(static_cast<float>(screenW - 240), static_cast<float>(screenH - 42), GLUT_BITMAP_HELVETICA_10,
+                     "PERSPECTIVE FOV: 45 DEG", 0.5f, 0.75f, 0.95f);
+
+    // Model telemetry box (left side)
+    float boxX = 20.0f;
+    float boxY = static_cast<float>(screenH - 180);
+    float boxW = 320.0f;
+    float boxH = 115.0f;
+
+    glBegin(GL_QUADS);
+        glColor4f(0.04f, 0.07f, 0.14f, 0.80f);
+        glVertex2f(boxX, boxY);
+        glVertex2f(boxX + boxW, boxY);
+        glVertex2f(boxX + boxW, boxY + boxH);
+        glVertex2f(boxX, boxY + boxH);
+    glEnd();
+
+    glLineWidth(1.0f);
+    glBegin(GL_LINE_LOOP);
+        glColor3f(0.2f, 0.6f, 0.9f);
+        glVertex2f(boxX, boxY);
+        glVertex2f(boxX + boxW, boxY);
+        glVertex2f(boxX + boxW, boxY + boxH);
+        glVertex2f(boxX, boxY + boxH);
+    glEnd();
+
+    const Mesh3D& activeMesh = (modelType == 0) ? shipMesh : asteroidMesh;
+    drawBitmapString(boxX + 15.0f, boxY + boxH - 22.0f, GLUT_BITMAP_HELVETICA_12,
+                     "ACTIVE MODEL: " + activeMesh.getName(), 0.95f, 0.95f, 0.4f);
+    drawBitmapString(boxX + 15.0f, boxY + boxH - 42.0f, GLUT_BITMAP_HELVETICA_12,
+                     "VIEW MODE: " + std::string(wireframe ? "WIREFRAME CONTOUR" : "SOLID FACETED (DIFFUSE)"), 0.3f, 0.9f, 1.0f);
+    drawBitmapString(boxX + 15.0f, boxY + boxH - 62.0f, GLUT_BITMAP_HELVETICA_10,
+                     "TOPOLOGY: " + std::to_string(activeMesh.getVertexCount()) + " Vertices  |  " +
+                     std::to_string(activeMesh.getFaceCount()) + " Faces", 0.7f, 0.8f, 0.95f);
+    drawBitmapString(boxX + 15.0f, boxY + boxH - 82.0f, GLUT_BITMAP_HELVETICA_10,
+                     "EULER ROT: [" + std::to_string(static_cast<int>(rotX)) + " deg, " +
+                     std::to_string(static_cast<int>(rotY)) + " deg, " +
+                     std::to_string(static_cast<int>(rotZ)) + " deg]", 0.4f, 0.95f, 0.5f);
+    drawBitmapString(boxX + 15.0f, boxY + boxH - 100.0f, GLUT_BITMAP_HELVETICA_10,
+                     "ZOOM SCALE: " + std::to_string(scale).substr(0, 4) + "x", 0.4f, 0.95f, 0.5f);
+
+    // Bottom controls bar
+    glBegin(GL_QUADS);
+        glColor4f(0.04f, 0.07f, 0.12f, 0.85f);
+        glVertex2f(0.0f, 0.0f);
+        glVertex2f(static_cast<float>(screenW), 0.0f);
+        glVertex2f(static_cast<float>(screenW), 36.0f);
+        glVertex2f(0.0f, 36.0f);
+    glEnd();
+
+    drawBitmapString(20.0f, 12.0f, GLUT_BITMAP_HELVETICA_10,
+                     "[1] Ship  [2] Asteroid  |  [V] Wireframe/Solid  |  [W/S] Pitch  [A/D] Yaw  [Q/E] Roll  |  [+/-] Zoom  |  [P] Auto-Spin  |  [R] Reset  |  [H] Return to Game",
+                     0.4f, 0.9f, 1.0f);
+}
+
+
 

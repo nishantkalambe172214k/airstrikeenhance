@@ -24,6 +24,8 @@
 #include "Renderer.h"
 #include "Bresenham.h"
 #include "NetworkBridge.h"
+#include "AreaFill.h"
+#include "Mesh3D.h"
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
@@ -65,6 +67,88 @@ int targetEnemyId = -1;
 
 bool keys[256] = { false };
 bool specialKeys[256] = { false };
+
+// ============================================================================
+// [CGL CO-3] AREA-FILL ALGORITHM DEMONSTRATOR STATE
+// Course Outcome 3: Develop 2D objects using various algorithms.
+// - Interactive demonstrator for Iterative 4-connected Flood-Fill & Boundary-Fill.
+// - Renders into off-screen PixelBuffer (120x120) with 2x display magnification.
+// ============================================================================
+bool isDemoModeActive = false;
+int demoAlgorithmType = 0; // 0: Boundary-Fill, 1: Flood-Fill
+int demoShapeType = 0;     // 0: Bresenham Circle Shield, 1: 10-Vertex Asteroid Rock
+int demoColorIndex = 0;    // 0: Cyan, 1: Yellow, 2: Green, 3: Red
+PixelBuffer demoBuffer(120, 120, PixelColor::Black);
+int demoFilledPixels = 0;
+
+void updateAreaFillDemo() {
+    demoBuffer.clear(PixelColor::Black);
+    int cx = 60, cy = 60;
+
+    PixelColor fillColors[] = {
+        PixelColor::Cyan,
+        PixelColor::Yellow,
+        PixelColor::Green,
+        PixelColor::Red
+    };
+    PixelColor fillColor = fillColors[demoColorIndex % 4];
+
+    if (demoShapeType == 0) {
+        // Enclosed Shape 1: Bresenham Circle Shield (radius = 44)
+        PixelColor boundaryColor = PixelColor::ShieldBlue;
+        demoBuffer.drawCircle(cx, cy, 44, boundaryColor);
+
+        if (demoAlgorithmType == 0) {
+            demoFilledPixels = AreaFill::boundaryFill4(demoBuffer, cx, cy, fillColor, boundaryColor);
+        } else {
+            demoFilledPixels = AreaFill::floodFill4(demoBuffer, cx, cy, fillColor);
+        }
+    } else {
+        // Enclosed Shape 2: 10-Vertex Irregular/Concave Asteroid Silhouette
+        const int NUM_SECTORS = 10;
+        const float angles[NUM_SECTORS] = {
+            0.0f, 0.628f, 1.256f, 1.884f, 2.512f,
+            3.141f, 3.769f, 4.397f, 5.025f, 5.653f
+        };
+        const float radiusRatios[NUM_SECTORS] = {
+            1.0f, 0.82f, 1.08f, 0.90f, 1.15f,
+            0.85f, 1.05f, 0.78f, 1.12f, 0.92f
+        };
+        float radius = 42.0f;
+        std::vector<Point2D> rockVerts;
+        for (int i = 0; i < NUM_SECTORS; ++i) {
+            float r = radius * radiusRatios[i];
+            float px = static_cast<float>(cx) + r * std::cos(angles[i]);
+            float py = static_cast<float>(cy) + r * std::sin(angles[i]);
+            rockVerts.push_back({ px, py });
+        }
+        PixelColor boundaryColor = PixelColor::AsteroidBrown;
+        demoBuffer.drawPolygon(rockVerts, boundaryColor);
+
+        if (demoAlgorithmType == 0) {
+            demoFilledPixels = AreaFill::boundaryFill4(demoBuffer, cx, cy, fillColor, boundaryColor);
+        } else {
+            demoFilledPixels = AreaFill::floodFill4(demoBuffer, cx, cy, fillColor);
+        }
+    }
+}
+
+// ============================================================================
+// [CGL CO-3] 3D OBJECT CONSTRUCTION & HANGAR STATE
+// Course Outcome 3: Develop 3D objects using polygons and algorithms.
+// - Dedicated 3D models: Custom Spaceship & Geodesic Asteroid meshes.
+// - 3D Viewing Pipeline: Perspective projection (gluPerspective) + GL_DEPTH_TEST.
+// ============================================================================
+bool isHangar3DActive = false;
+int hangarModelType = 0; // 0 = Spaceship, 1 = Asteroid
+bool hangarWireframe = false;
+bool hangarAutoSpin = true;
+float hangarRotX = 15.0f;
+float hangarRotY = 0.0f;
+float hangarRotZ = 0.0f;
+float hangarScale = 1.0f;
+Mesh3D spaceship3D;
+Mesh3D asteroid3D;
 
 void spawnEnemyWave(int waveNumber) {
     enemyList.clear();
@@ -124,7 +208,7 @@ void restartGame() {
 }
 
 void handleInput() {
-    if (isGameOver) return;
+    if (isGameOver || isHangar3DActive || isDemoModeActive) return;
 
     float dx = 0.0f;
     float dy = 0.0f;
@@ -373,6 +457,16 @@ void updateGame() {
 }
 
 void display() {
+    // CGL CO-3: 3D Hangar & Custom 3D Object Preview Scene (if active)
+    if (isHangar3DActive) {
+        renderer.render3DHangarScene(hangarModelType, hangarWireframe,
+                                     hangarRotX, hangarRotY, hangarRotZ,
+                                     hangarScale, spaceship3D, asteroid3D,
+                                     WINDOW_WIDTH, WINDOW_HEIGHT);
+        glutSwapBuffers();
+        return;
+    }
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     renderer.renderBackground(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -447,6 +541,12 @@ void display() {
                                    0.95f, 0.75f, 0.2f);
     }
 
+    // 6c. Render CGL CO-3 Algorithm Telemetry Banner
+    std::string fillStatus = (renderer.isScanLineFillEnabled() ? "[F] SCANLINE: ON" : "[F] SCANLINE: OFF") +
+                             std::string("  |  [M] 2D FILL DEMO  |  [H] 3D HANGAR");
+    Renderer::drawBitmapString(WINDOW_WIDTH - 420.0f, WINDOW_HEIGHT - 40.0f, GLUT_BITMAP_HELVETICA_10,
+                               fillStatus, 0.3f, 0.95f, 0.95f);
+
     // 7. Render Bresenham Radar Minimap (CGL CO-2)
     std::vector<Point2D> enemyPos;
     EnemyNode* enm = enemyList.getHead();
@@ -473,12 +573,25 @@ void display() {
         renderer.renderGameOver(playerScore, WINDOW_WIDTH, WINDOW_HEIGHT);
     }
 
+    // 8. Render CG CO-3 Area-Fill Demonstration Overlay (if active)
+    if (isDemoModeActive) {
+        renderer.renderAreaFillDemoOverlay(demoAlgorithmType, demoShapeType, demoFilledPixels,
+                                           demoColorIndex, demoBuffer, WINDOW_WIDTH, WINDOW_HEIGHT);
+    }
+
     glutSwapBuffers();
 }
 
 void timer(int) {
     handleInput();
-    updateGame();
+    if (isHangar3DActive) {
+        if (hangarAutoSpin) {
+            hangarRotY += 1.2f;
+            if (hangarRotY >= 360.0f) hangarRotY -= 360.0f;
+        }
+    } else if (!isDemoModeActive) {
+        updateGame();
+    }
     glutPostRedisplay();
     glutTimerFunc(FRAME_DELAY_MS, timer, 0);
 }
@@ -495,6 +608,86 @@ void keyDown(unsigned char key, int, int) {
     }
     if ((key == 'r' || key == 'R') && isGameOver) {
         restartGame();
+    }
+    // [CGL CO-3] Toggle genuine Scan-Line ET/AET polygon filling on procedural asteroid rocks
+    if (key == 'f' || key == 'F') {
+        renderer.toggleScanLineFill();
+        std::cout << "\n>>> [CGL CO-3] Scan-Line Polygon Fill toggled: "
+                  << (renderer.isScanLineFillEnabled() ? "ACTIVE (Genuine ET/AET Algorithm)" : "OFF (OpenGL Built-in Fallback)")
+                  << " <<<\n";
+    }
+    // [CGL CO-3] Toggle 3D Hangar Scene (Custom 3D Spaceship & Asteroid inspection)
+    if (key == 'h' || key == 'H') {
+        isHangar3DActive = !isHangar3DActive;
+        if (isHangar3DActive) {
+            isDemoModeActive = false; // prioritize 3D Hangar
+            std::cout << "\n>>> [CGL CO-3] Opened 3D Object Construction Hangar (Spaceship / Asteroid Mesh) <<<\n";
+        } else {
+            renderer.setup2DProjection(WINDOW_WIDTH, WINDOW_HEIGHT);
+            std::cout << "\n>>> [CGL CO-3] Restored 2D Orthographic Projection & Resumed Game <<<\n";
+        }
+    }
+    // [CGL CO-3] Interactive 3D Hangar Controls (Pitch, Yaw, Roll, Scale, Wireframe)
+    if (isHangar3DActive) {
+        if (key == '1') {
+            hangarModelType = 0; // Spaceship
+        } else if (key == '2') {
+            hangarModelType = 1; // Asteroid
+        } else if (key == 'v' || key == 'V') {
+            hangarWireframe = !hangarWireframe;
+        } else if (key == 'p' || key == 'P') {
+            hangarAutoSpin = !hangarAutoSpin;
+        } else if (key == 'w' || key == 'W') {
+            hangarRotX += 5.0f;
+        } else if (key == 's' || key == 'S') {
+            hangarRotX -= 5.0f;
+        } else if (key == 'a' || key == 'A') {
+            hangarRotY -= 5.0f;
+        } else if (key == 'd' || key == 'D') {
+            hangarRotY += 5.0f;
+        } else if (key == 'q' || key == 'Q') {
+            hangarRotZ -= 5.0f;
+        } else if (key == 'e' || key == 'E') {
+            hangarRotZ += 5.0f;
+        } else if (key == '+' || key == '=') {
+            hangarScale = std::min(hangarScale * 1.1f, 3.0f);
+        } else if (key == '-' || key == '_') {
+            hangarScale = std::max(hangarScale * 0.9f, 0.3f);
+        } else if (key == 'r' || key == 'R') {
+            hangarRotX = 15.0f;
+            hangarRotY = 0.0f;
+            hangarRotZ = 0.0f;
+            hangarScale = 1.0f;
+            hangarAutoSpin = true;
+        }
+        return;
+    }
+    // [CGL CO-3] Toggle 2D Area-Fill Demonstrator Overlay (Flood-Fill & Boundary-Fill)
+    if (key == 'm' || key == 'M' || key == '\t') {
+        isDemoModeActive = !isDemoModeActive;
+        if (isDemoModeActive) {
+            updateAreaFillDemo();
+            std::cout << "\n>>> [CGL CO-3] Opened CG Algorithm Demonstrator (Flood-Fill & Boundary-Fill) <<<\n";
+        } else {
+            std::cout << "\n>>> [CGL CO-3] Resumed AirStriker 60 FPS Space Combat <<<\n";
+        }
+    }
+    if (isDemoModeActive) {
+        if (key == '1') {
+            demoAlgorithmType = 0; // Boundary-Fill
+            updateAreaFillDemo();
+        } else if (key == '2') {
+            demoAlgorithmType = 1; // Flood-Fill
+            updateAreaFillDemo();
+        } else if (key == '3') {
+            demoShapeType = (demoShapeType + 1) % 2; // Toggle Circle / Asteroid
+            updateAreaFillDemo();
+        } else if (key == 'c' || key == 'C') {
+            demoColorIndex = (demoColorIndex + 1) % 4; // Cycle palette
+            updateAreaFillDemo();
+        } else if (key == ' ') {
+            updateAreaFillDemo(); // Re-fill
+        }
     }
 }
 
@@ -526,20 +719,32 @@ int main(int argc, char** argv) {
     std::cout << "  [COA]   80386 ALU Simulator: Initialized\n";
     std::cout << "  [CGL]   OpenGL Geometric Primitive Renderer: Initialized\n";
     std::cout << "  [CGL]   Mid-point Bresenham Line & Circle Algorithms: Active\n";
+    std::cout << "  [CGL]   Scan-Line ET/AET, Flood-Fill & Boundary-Fill: Active (CO-3)\n";
+    std::cout << "  [CGL]   3D Mesh Pipeline & Hangar (Spaceship / Asteroid): Active (CO-3)\n";
     std::cout << "  [PSOOP] Game State & Domain Model: Initialized\n";
     std::cout << "-------------------------------------------------------\n";
     std::cout << "  CONTROLS:\n";
     std::cout << "    W / A / S / D or ARROWS = Move Spaceship\n";
     std::cout << "    SPACE                   = Fire Laser Cannon\n";
+    std::cout << "    F                       = Toggle Scan-Line Fill (Procedural Rocks)\n";
+    std::cout << "    M / TAB                 = 2D Fill Demonstrator (Flood/Boundary)\n";
+    std::cout << "    H                       = 3D Hangar (Custom Spaceship & Asteroid)\n";
     std::cout << "    R                       = Restart after Game Over\n";
     std::cout << "    ESC                     = Exit Game\n";
     std::cout << "=======================================================\n\n";
 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     glutInitWindowPosition(150, 100);
-    glutCreateWindow("AirStriker — 2D Space Shooter (CO-2 Edition: 2D Matrix & Bresenham)");
+    glutCreateWindow("AirStriker — 2D Space Shooter (CO-2/CO-3 Edition)");
+
+    // Initialize CGL CO-3 Custom 3D Object Meshes
+    spaceship3D = Mesh3D::createSpaceship();
+    asteroid3D = Mesh3D::createAsteroid();
+    std::cout << "  [CGL CO-3] Custom 3D Meshes Initialized:\n";
+    std::cout << "             - Spaceship 3D (" << spaceship3D.getVertices().size() << " vertices, " << spaceship3D.getFaces().size() << " faces)\n";
+    std::cout << "             - Asteroid 3D (" << asteroid3D.getVertices().size() << " vertices, " << asteroid3D.getFaces().size() << " faces)\n";
 
     renderer.initStarfield(90, WINDOW_WIDTH, WINDOW_HEIGHT);
 

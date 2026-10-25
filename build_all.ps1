@@ -26,16 +26,28 @@ Write-Host "[5/8] Compiling Computer Organization & Architecture (COA) ALU Simul
 g++ -std=c++11 -I./COA/ALU COA/ALU/ALU80386.cpp COA/ALU/test_alu.cpp -o bin/test_alu.exe
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile COA ALU tests."; exit 1 }
 
-Write-Host "[6/8] Compiling Computer Graphics Lab (CGL) Transformation Tests (CO-2)..." -ForegroundColor Yellow
-g++ -std=c++11 -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/tests/test_transformations.cpp -o bin/test_transformations.exe -lopengl32 -lglu32 -lglut32
+Write-Host "[6/11] Compiling Computer Graphics Lab (CGL) Transformation Tests (CO-2)..." -ForegroundColor Yellow
+g++ -std=c++11 -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/tests/test_transformations.cpp -o bin/test_transformations.exe -lopengl32 -lglu32 -lglut32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL transformation tests."; exit 1 }
 
-Write-Host "[7/8] Compiling Computer Graphics Lab (CGL) Bresenham Line & Circle Tests (CO-2)..." -ForegroundColor Yellow
+Write-Host "[7/11] Compiling Computer Graphics Lab (CGL) Bresenham Line & Circle Tests (CO-2)..." -ForegroundColor Yellow
 g++ -std=c++11 -I./CGL/src CGL/src/Bresenham.cpp CGL/tests/test_bresenham.cpp -o bin/test_bresenham.exe -lopengl32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL Bresenham algorithm tests."; exit 1 }
 
-Write-Host "[8/8] Compiling Computer Graphics Lab (CGL) Integrated Desktop Game (CO-2)..." -ForegroundColor Yellow
-g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
+Write-Host "[8/11] Compiling Computer Graphics Lab (CGL) Scan-Line Fill Tests (CO-3)..." -ForegroundColor Yellow
+g++ -std=c++11 -I./CGL/src CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/tests/test_scanline_fill.cpp -o bin/test_scanline_fill.exe -lopengl32
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL scanline fill tests."; exit 1 }
+
+Write-Host "[9/11] Compiling Computer Graphics Lab (CGL) Area Fill Tests (Flood-Fill & Boundary-Fill) (CO-3)..." -ForegroundColor Yellow
+g++ -std=c++11 -I./CGL/src CGL/src/Bresenham.cpp CGL/src/AreaFill.cpp CGL/tests/test_area_fill.cpp -o bin/test_area_fill.exe -lopengl32
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL area fill tests."; exit 1 }
+
+Write-Host "[10/11] Compiling Computer Graphics Lab (CGL) 3D Mesh Pipeline Tests (CO-3)..." -ForegroundColor Yellow
+g++ -std=c++11 -I./CGL/src CGL/src/Mesh3D.cpp CGL/tests/test_3d_pipeline.cpp -o bin/test_3d_pipeline.exe -lopengl32
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL 3D pipeline tests."; exit 1 }
+
+Write-Host "[11/11] Compiling Computer Graphics Lab (CGL) Integrated Desktop Game (CO-3)..." -ForegroundColor Yellow
+g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL game executable."; exit 1 }
 
 # Ensure glut32.dll is located next to the executable
