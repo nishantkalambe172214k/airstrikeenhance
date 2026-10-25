@@ -23,7 +23,8 @@ public class Boss extends Enemy {
                 final int collisionDamage, final int armorRating) {
         // CO-2: Super constructor call
         super(id, name, "BOSS", startX, startY, maxHealth, speed, scoreValue, collisionDamage);
-        this.armorRating = Math.max(0, armorRating);
+        this.armorRating = Math.
+        max(0, armorRating);
         this.phase = 1;
         this.enrageMode = false;
     }

@@ -35,7 +35,7 @@ g++ -std=c++11 -I./CGL/src CGL/src/Bresenham.cpp CGL/tests/test_bresenham.cpp -o
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL Bresenham algorithm tests."; exit 1 }
 
 Write-Host "[8/8] Compiling Computer Graphics Lab (CGL) Integrated Desktop Game (CO-2)..." -ForegroundColor Yellow
-g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32
+g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL game executable."; exit 1 }
 
 # Ensure glut32.dll is located next to the executable

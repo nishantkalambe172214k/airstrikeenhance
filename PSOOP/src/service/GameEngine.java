@@ -195,9 +195,25 @@ public class GameEngine {
         }
         bullets.removeIf(b -> !b.isActive());
 
-        for (final Enemy e : enemies) { // enemy is a reference of Enemy class but actual object can be Drone, Fighter
-                                        // or Boss
-            e.move(); // actual obj ke accoriding move
+        
+        // WITHOUT POLYMORPHISM (UGLY, FRAGILE CODE):
+        // for (Enemy e : enemies) {
+        //     if (e.getEnemyType().equals("DRONE")) {
+        //         // 10 lines of sine wave math
+        //     } else if (e.getEnemyType().equals("FIGHTER")) {
+        //         // 10 lines of zigzag evasion sweep math
+        //     } else if (e.getEnemyType().equals("BOSS")) {
+        //         // 10 lines of boss dreadnought patrol math
+        //     }
+        // }
+        //
+        // WITH RUNTIME POLYMORPHISM (CLEAN, SCALABLE OOP DESIGN):
+        // Each subclass (Drone, Fighter, Boss) overrides move(). Through Dynamic
+        
+
+        
+        for (final Enemy e : enemies) {
+            e.move(); // Dynamically dispatches to Drone.move(), Fighter.move(), or Boss.move()
         }
         enemies.removeIf(e -> !e.isActive());
 

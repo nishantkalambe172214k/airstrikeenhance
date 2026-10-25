@@ -190,8 +190,95 @@ void Renderer::renderPlayerShip(float x, float y, float size, bool isAlive, floa
 // 1. Forward-swept dark red wings (quad)
 // 2. Dagger-shaped main chassis (triangle)
 // 3. Amber energy core cockpit (polygon)
-void Renderer::renderEnemyShip(float x, float y, float size, float angle, float scale) {
-    // 1. Wings (crimson quad)
+// 1. Forward-swept dark red wings (quad)
+// 2. Dagger-shaped main chassis (triangle)
+// 3. Amber energy core cockpit (polygon)
+// Enhanced to render polymorphic subclasses (Drone, Fighter, Boss)
+void Renderer::renderEnemyShip(float x, float y, float size, float angle, float scale, const std::string& type) {
+    if (type == "BOSS") {
+        scale *= 1.8f;
+        // Heavy Boss dreadnought: gold trim wings, dark obsidian hull, menacing crimson reactor
+        Point2D w1 = transformPoint({ 0.0f, +size * 0.5f }, scale, scale, angle, x, y);
+        Point2D w2 = transformPoint({ +size * 0.8f, +size * 0.9f }, scale, scale, angle, x, y);
+        Point2D w3 = transformPoint({ +size * 0.8f, -size * 0.9f }, scale, scale, angle, x, y);
+        Point2D w4 = transformPoint({ 0.0f, -size * 0.5f }, scale, scale, angle, x, y);
+
+        glBegin(GL_QUADS);
+            glColor3f(0.85f, 0.65f, 0.15f); // Gold heavy armor trim
+            glVertex2f(w1.x, w1.y);
+            glVertex2f(w2.x, w2.y);
+            glVertex2f(w3.x, w3.y);
+            glVertex2f(w4.x, w4.y);
+        glEnd();
+
+        Point2D b1 = transformPoint({ -size * 1.0f, 0.0f }, scale, scale, angle, x, y);
+        Point2D b2 = transformPoint({ +size * 0.7f, +size * 0.6f }, scale, scale, angle, x, y);
+        Point2D b3 = transformPoint({ +size * 0.7f, -size * 0.6f }, scale, scale, angle, x, y);
+
+        glBegin(GL_TRIANGLES);
+            glColor3f(0.5f, 0.08f, 0.12f);
+            glVertex2f(b1.x, b1.y);
+            glColor3f(0.25f, 0.02f, 0.05f);
+            glVertex2f(b2.x, b2.y);
+            glVertex2f(b3.x, b3.y);
+        glEnd();
+
+        Point2D c1 = transformPoint({ -size * 0.3f, 0.0f }, scale, scale, angle, x, y);
+        Point2D c2 = transformPoint({ 0.0f, +size * 0.2f }, scale, scale, angle, x, y);
+        Point2D c3 = transformPoint({ +size * 0.3f, 0.0f }, scale, scale, angle, x, y);
+        Point2D c4 = transformPoint({ 0.0f, -size * 0.2f }, scale, scale, angle, x, y);
+
+        glBegin(GL_POLYGON);
+            glColor3f(1.0f, 0.15f, 0.15f); // Menacing crimson reactor core
+            glVertex2f(c1.x, c1.y);
+            glVertex2f(c2.x, c2.y);
+            glVertex2f(c3.x, c3.y);
+            glVertex2f(c4.x, c4.y);
+        glEnd();
+        return;
+    } else if (type == "FIGHTER") {
+        // Fast interceptor fighter: violet/indigo swept wings with cyan sensor
+        Point2D w1 = transformPoint({ 0.0f, +size * 0.3f }, scale, scale, angle, x, y);
+        Point2D w2 = transformPoint({ +size * 0.6f, +size * 0.8f }, scale, scale, angle, x, y);
+        Point2D w3 = transformPoint({ +size * 0.6f, -size * 0.8f }, scale, scale, angle, x, y);
+        Point2D w4 = transformPoint({ 0.0f, -size * 0.3f }, scale, scale, angle, x, y);
+
+        glBegin(GL_QUADS);
+            glColor3f(0.35f, 0.1f, 0.65f); // Violet wings
+            glVertex2f(w1.x, w1.y);
+            glVertex2f(w2.x, w2.y);
+            glVertex2f(w3.x, w3.y);
+            glVertex2f(w4.x, w4.y);
+        glEnd();
+
+        Point2D b1 = transformPoint({ -size * 0.9f, 0.0f }, scale, scale, angle, x, y);
+        Point2D b2 = transformPoint({ +size * 0.5f, +size * 0.35f }, scale, scale, angle, x, y);
+        Point2D b3 = transformPoint({ +size * 0.5f, -size * 0.35f }, scale, scale, angle, x, y);
+
+        glBegin(GL_TRIANGLES);
+            glColor3f(0.55f, 0.2f, 0.85f);
+            glVertex2f(b1.x, b1.y);
+            glColor3f(0.2f, 0.05f, 0.4f);
+            glVertex2f(b2.x, b2.y);
+            glVertex2f(b3.x, b3.y);
+        glEnd();
+
+        Point2D c1 = transformPoint({ -size * 0.25f, 0.0f }, scale, scale, angle, x, y);
+        Point2D c2 = transformPoint({ 0.0f, +size * 0.15f }, scale, scale, angle, x, y);
+        Point2D c3 = transformPoint({ +size * 0.25f, 0.0f }, scale, scale, angle, x, y);
+        Point2D c4 = transformPoint({ 0.0f, -size * 0.15f }, scale, scale, angle, x, y);
+
+        glBegin(GL_POLYGON);
+            glColor3f(0.1f, 0.9f, 0.95f); // Cyan sensor
+            glVertex2f(c1.x, c1.y);
+            glVertex2f(c2.x, c2.y);
+            glVertex2f(c3.x, c3.y);
+            glVertex2f(c4.x, c4.y);
+        glEnd();
+        return;
+    }
+
+    // 1. Wings (crimson quad) - DRONE
     Point2D w1 = transformPoint({ 0.0f, +size * 0.2f }, scale, scale, angle, x, y);
     Point2D w2 = transformPoint({ +size * 0.7f, +size * 0.7f }, scale, scale, angle, x, y);
     Point2D w3 = transformPoint({ +size * 0.7f, -size * 0.7f }, scale, scale, angle, x, y);

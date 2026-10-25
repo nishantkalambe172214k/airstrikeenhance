@@ -23,6 +23,7 @@
 #include "../../COA/ALU/ALU80386.h"
 #include "Renderer.h"
 #include "Bresenham.h"
+#include "NetworkBridge.h"
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
@@ -34,6 +35,10 @@ BulletPoolArray bulletPool;
 EnemyLinkedList enemyList;
 AsteroidGridMatrix asteroidGrid;
 ALU80386 alu;
+NetworkBridge psoopBridge;
+RemoteGameState psoopState;
+std::vector<RemoteEnemy> psoopEnemies;
+bool psoopOnline = false;
 
 float playerX = 100.0f;
 float playerY = 300.0f;
@@ -63,6 +68,22 @@ bool specialKeys[256] = { false };
 
 void spawnEnemyWave(int waveNumber) {
     enemyList.clear();
+
+    if (psoopOnline) {
+        psoopEnemies.clear();
+        if (psoopBridge.spawnWave(waveNumber, psoopEnemies) && !psoopEnemies.empty()) {
+            std::cout << "\n>>> [PSOOP JAVA] INCOMING WAVE #" << waveNumber
+                      << " (" << psoopEnemies.size() << " Polymorphic Enemies: Drone/Fighter/Boss) <<<\n";
+            for (const auto& re : psoopEnemies) {
+                float vx = (re.type == "BOSS") ? -0.8f : ((re.type == "FIGHTER") ? -2.2f : -3.0f);
+                float vy = 0.0f;
+                enemyList.addEnemy(re.id, re.x, re.y, vx, vy, re.health, re.maxHealth, re.scoreValue, re.collisionDamage, 0.0f);
+            }
+            asteroidGrid.generateProceduralWave(waveNumber, WINDOW_WIDTH, WINDOW_HEIGHT, 850.0f);
+            return;
+        }
+    }
+
     int count = 3 + waveNumber;
     std::cout << "\n>>> [GAMEPLAY] INCOMING WAVE #" << waveNumber
               << " (" << count << " Alien Drones & Asteroid Field Approaching!) <<<\n";
@@ -93,6 +114,10 @@ void restartGame() {
     isGameOver = false;
     currentWave = 1;
     fireCooldown = 0;
+
+    if (psoopOnline) {
+        psoopBridge.resetGame();
+    }
 
     bulletPool.reset();
     spawnEnemyWave(currentWave);
@@ -197,6 +222,21 @@ void updateGame() {
         eCurr = eCurr->next;
     }
 
+    if (psoopOnline) {
+        psoopBridge.tickSimulation(0.0f, 0.0f, psoopState, psoopEnemies);
+        for (const auto& re : psoopEnemies) {
+            EnemyNode* cur = enemyList.getHead();
+            while (cur != nullptr) {
+                if (cur->data.id == re.id) {
+                    cur->data.x = re.x;
+                    cur->data.y = re.y;
+                    break;
+                }
+                cur = cur->next;
+            }
+        }
+    }
+
     if (enemyList.isEmpty()) {
         currentWave++;
         spawnEnemyWave(currentWave);
@@ -222,6 +262,9 @@ void updateGame() {
                     int destroyedId = eNode->data.id;
                     int bounty = eNode->data.scoreValue;
                     playerScore = alu.computeScoreAdd(playerScore, bounty, true);
+                    if (psoopOnline) {
+                        psoopBridge.sendAluFeedback(0, bounty, alu.getEAX(), alu.getEDX(), alu.getZF(), alu.getSF(), alu.getCF());
+                    }
                     enemyList.removeEnemy(destroyedId);
                 }
                 break;
@@ -276,6 +319,10 @@ void updateGame() {
                         fatal,
                         true
                     ));
+
+                    if (psoopOnline) {
+                        psoopBridge.sendAluFeedback(damage, 0, alu.getEAX(), alu.getEDX(), alu.getZF(), alu.getSF(), alu.getCF());
+                    }
 
                     if (fatal || playerHealth <= 0) {
                         playerHealth = 0;
@@ -349,10 +396,13 @@ void display() {
         }
     }
 
-    // 3. Render Enemies
+    // 3. Render Enemies (Polymorphic Drone, Fighter, Boss from PSOOP)
     EnemyNode* eNode = enemyList.getHead();
     while (eNode != nullptr) {
-        renderer.renderEnemyShip(eNode->data.x, eNode->data.y, 22.0f, eNode->data.angle, 1.0f);
+        std::string type = "DRONE";
+        if (eNode->data.maxHealth >= 200) type = "BOSS";
+        else if (eNode->data.maxHealth >= 60) type = "FIGHTER";
+        renderer.renderEnemyShip(eNode->data.x, eNode->data.y, 22.0f, eNode->data.angle, 1.0f, type);
         eNode = eNode->next;
     }
 
@@ -380,6 +430,22 @@ void display() {
     renderer.renderHUD(playerHealth, PLAYER_MAX_HEALTH, playerShield, playerScore,
                       currentWave, bulletPool.getActiveCount(), bulletPool.getCapacity(),
                       WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    // 6b. Render 4-Subject Integration Banner
+    if (psoopOnline) {
+        Renderer::drawBitmapString(15.0f, WINDOW_HEIGHT - 40.0f, GLUT_BITMAP_HELVETICA_10,
+                                   "[4-SUBJECT REAL-TIME INTEGRATION ACTIVE: PL + COA + CGL + PSOOP ONLINE]",
+                                   0.2f, 0.95f, 0.4f);
+        if (!psoopState.hudText.empty()) {
+            Renderer::drawBitmapString(15.0f, WINDOW_HEIGHT - 54.0f, GLUT_BITMAP_HELVETICA_10,
+                                       "JAVA TELEMETRY: " + psoopState.hudText,
+                                       0.3f, 0.85f, 1.0f);
+        }
+    } else {
+        Renderer::drawBitmapString(15.0f, WINDOW_HEIGHT - 40.0f, GLUT_BITMAP_HELVETICA_10,
+                                   "[LOCAL MODE: PL + COA + CGL] Start PSOOPBridgeServer to link PSOOP",
+                                   0.95f, 0.75f, 0.2f);
+    }
 
     // 7. Render Bresenham Radar Minimap (CGL CO-2)
     std::vector<Point2D> enemyPos;
@@ -476,6 +542,16 @@ int main(int argc, char** argv) {
     glutCreateWindow("AirStriker — 2D Space Shooter (CO-2 Edition: 2D Matrix & Bresenham)");
 
     renderer.initStarfield(90, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    std::cout << "  Connecting to PSOOP Java Subsystem (127.0.0.1:9092)...\n";
+    psoopOnline = psoopBridge.connectTo("127.0.0.1", 9092);
+    if (psoopOnline) {
+        std::cout << "  [PSOOP] LIVE CONNECTED! (4-Subject Real-time Integration Active)\n";
+        psoopBridge.initGame("CadetPilot");
+    } else {
+        std::cout << "  [PSOOP] Server offline at 127.0.0.1:9092. Running in standalone fallback mode.\n";
+    }
+
     restartGame();
 
     glutDisplayFunc(display);

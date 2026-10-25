@@ -57,7 +57,7 @@ public:
     // Vector Primitive Rendering
     void renderBackground(float width, float height);
     void renderPlayerShip(float x, float y, float size, bool isAlive, float angle = 0.0f, float scale = 1.0f);
-    void renderEnemyShip(float x, float y, float size, float angle = 0.0f, float scale = 1.0f);
+    void renderEnemyShip(float x, float y, float size, float angle = 0.0f, float scale = 1.0f, const std::string& type = "DRONE");
     void renderLaserBolt(float x, float y, float length, float width, bool isPlayer = true, float angle = 0.0f);
 
     // Asteroid Field Matrix Rendering (PL 2D Array)
