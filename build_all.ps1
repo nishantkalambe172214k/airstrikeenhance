@@ -14,40 +14,44 @@ Write-Host "[2/8] Compiling Programming Lab (PL) Enemy Linked List Tests (CO-2).
 g++ -std=c++11 -I./PL/src PL/src/EnemyLinkedList.cpp PL/tests/test_enemy_list.cpp -o bin/test_enemy_list.exe
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile PL enemy linked list tests."; exit 1 }
 
-Write-Host "[3/8] Compiling Programming Lab (PL) 2D Array Asteroid Grid Matrix Tests (CO-2)..." -ForegroundColor Yellow
+Write-Host "[3/12] Compiling Programming Lab (PL) 2D Array Asteroid Grid Matrix Tests (CO-2)..." -ForegroundColor Yellow
 g++ -std=c++11 -I./PL/src PL/src/AsteroidGridMatrix.cpp PL/tests/test_asteroid_grid.cpp -o bin/test_asteroid_grid.exe
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile PL asteroid grid matrix tests."; exit 1 }
 
-Write-Host "[4/8] Compiling Problem Solving using OOP (PSOOP) Java Module..." -ForegroundColor Yellow
+Write-Host "[4/12] Compiling Programming Lab (PL) Stack & Queue Tests (CO-3)..." -ForegroundColor Yellow
+g++ -std=c++11 -I./PL/src PL/src/CombatEventStack.cpp PL/src/EnemySpawnQueue.cpp PL/tests/test_stack_queue.cpp -o bin/test_stack_queue.exe
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile PL stack and queue tests."; exit 1 }
+
+Write-Host "[5/12] Compiling Problem Solving using OOP (PSOOP) Java Module..." -ForegroundColor Yellow
 javac -d bin/psoop PSOOP/src/exception/*.java PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/ui/*.java PSOOP/src/test/*.java
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile PSOOP Java sources."; exit 1 }
 
-Write-Host "[5/8] Compiling Computer Organization & Architecture (COA) ALU Simulator..." -ForegroundColor Yellow
+Write-Host "[6/12] Compiling Computer Organization & Architecture (COA) ALU Simulator..." -ForegroundColor Yellow
 g++ -std=c++11 -I./COA/ALU COA/ALU/ALU80386.cpp COA/ALU/test_alu.cpp -o bin/test_alu.exe
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile COA ALU tests."; exit 1 }
 
-Write-Host "[6/11] Compiling Computer Graphics Lab (CGL) Transformation Tests (CO-2)..." -ForegroundColor Yellow
-g++ -std=c++11 -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/tests/test_transformations.cpp -o bin/test_transformations.exe -lopengl32 -lglu32 -lglut32
+Write-Host "[7/12] Compiling Computer Graphics Lab (CGL) Transformation Tests (CO-2)..." -ForegroundColor Yellow
+g++ -std=c++11 -I./CGL/src -I./PL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp PL/src/CombatEventStack.cpp PL/src/EnemySpawnQueue.cpp CGL/tests/test_transformations.cpp -o bin/test_transformations.exe -lopengl32 -lglu32 -lglut32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL transformation tests."; exit 1 }
 
-Write-Host "[7/11] Compiling Computer Graphics Lab (CGL) Bresenham Line & Circle Tests (CO-2)..." -ForegroundColor Yellow
+Write-Host "[8/12] Compiling Computer Graphics Lab (CGL) Bresenham Line & Circle Tests (CO-2)..." -ForegroundColor Yellow
 g++ -std=c++11 -I./CGL/src CGL/src/Bresenham.cpp CGL/tests/test_bresenham.cpp -o bin/test_bresenham.exe -lopengl32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL Bresenham algorithm tests."; exit 1 }
 
-Write-Host "[8/11] Compiling Computer Graphics Lab (CGL) Scan-Line Fill Tests (CO-3)..." -ForegroundColor Yellow
+Write-Host "[9/12] Compiling Computer Graphics Lab (CGL) Scan-Line Fill Tests (CO-3)..." -ForegroundColor Yellow
 g++ -std=c++11 -I./CGL/src CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/tests/test_scanline_fill.cpp -o bin/test_scanline_fill.exe -lopengl32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL scanline fill tests."; exit 1 }
 
-Write-Host "[9/11] Compiling Computer Graphics Lab (CGL) Area Fill Tests (Flood-Fill & Boundary-Fill) (CO-3)..." -ForegroundColor Yellow
+Write-Host "[10/12] Compiling Computer Graphics Lab (CGL) Area Fill Tests (Flood-Fill & Boundary-Fill) (CO-3)..." -ForegroundColor Yellow
 g++ -std=c++11 -I./CGL/src CGL/src/Bresenham.cpp CGL/src/AreaFill.cpp CGL/tests/test_area_fill.cpp -o bin/test_area_fill.exe -lopengl32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL area fill tests."; exit 1 }
 
-Write-Host "[10/11] Compiling Computer Graphics Lab (CGL) 3D Mesh Pipeline Tests (CO-3)..." -ForegroundColor Yellow
+Write-Host "[11/12] Compiling Computer Graphics Lab (CGL) 3D Mesh Pipeline Tests (CO-3)..." -ForegroundColor Yellow
 g++ -std=c++11 -I./CGL/src CGL/src/Mesh3D.cpp CGL/tests/test_3d_pipeline.cpp -o bin/test_3d_pipeline.exe -lopengl32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL 3D pipeline tests."; exit 1 }
 
-Write-Host "[11/11] Compiling Computer Graphics Lab (CGL) Integrated Desktop Game (CO-3)..." -ForegroundColor Yellow
-g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
+Write-Host "[12/12] Compiling Computer Graphics Lab (CGL) Integrated Desktop Game (CO-3)..." -ForegroundColor Yellow
+g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp PL/src/CombatEventStack.cpp PL/src/EnemySpawnQueue.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL game executable."; exit 1 }
 
 # Ensure glut32.dll is located next to the executable

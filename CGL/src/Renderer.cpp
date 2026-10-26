@@ -3,6 +3,8 @@
 #include "ScanLineFiller.h"
 #include "AreaFill.h"
 #include "Mesh3D.h"
+#include "../../PL/src/CombatEventStack.h"
+#include "../../PL/src/EnemySpawnQueue.h"
 #include <cstdlib>
 #include <cmath>
 
@@ -977,5 +979,190 @@ void Renderer::render3DHangarScene(int modelType, bool wireframe, float rotX, fl
                      0.4f, 0.9f, 1.0f);
 }
 
+// ============================================================================
+// [PL CO-3] DATA STRUCTURE INSPECTOR OVERLAY (STACK & QUEUE)
+// Course Outcome 3: Build scenario-based applications using Stack and Queue (L3).
+// - Visualizes CombatEventStack (LIFO) and EnemySpawnQueue (FIFO) in real-time.
+// - Demonstrates top/front pointers, bounded storage, and safe empty operations.
+// ============================================================================
+void Renderer::renderPLDemoOverlay(const CombatEventStack& stack,
+                                   const EnemySpawnQueue& queue,
+                                   float screenW, float screenH) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // 1. Semi-transparent background backdrop
+    glBegin(GL_QUADS);
+        glColor4f(0.02f, 0.04f, 0.08f, 0.90f);
+        glVertex2f(20.0f, 15.0f);
+        glVertex2f(screenW - 20.0f, 15.0f);
+        glVertex2f(screenW - 20.0f, screenH - 15.0f);
+        glVertex2f(20.0f, screenH - 15.0f);
+    glEnd();
 
+    // Backdrop border
+    glLineWidth(1.5f);
+    glBegin(GL_LINE_LOOP);
+        glColor4f(0.2f, 0.6f, 0.95f, 0.85f);
+        glVertex2f(20.0f, 15.0f);
+        glVertex2f(screenW - 20.0f, 15.0f);
+        glVertex2f(screenW - 20.0f, screenH - 15.0f);
+        glVertex2f(20.0f, screenH - 15.0f);
+    glEnd();
+
+    // 2. Header Banner
+    float headerY = screenH - 42.0f;
+    drawBitmapString(35.0f, headerY, GLUT_BITMAP_HELVETICA_18,
+                     "PROGRAMMING LAB (PL) CO-3: STACK & QUEUE DEMONSTRATOR",
+                     0.3f, 0.95f, 1.0f);
+    drawBitmapString(35.0f, headerY - 20.0f, GLUT_BITMAP_HELVETICA_10,
+                     "Course Outcome 3: Build scenario-based applications using Stack (LIFO) and Queue (FIFO) (L3)",
+                     0.7f, 0.8f, 0.95f);
+
+    float colW = (screenW - 80.0f) * 0.5f;
+    float colH = screenH - 135.0f;
+    float leftColX = 35.0f;
+    float rightColX = 45.0f + colW;
+    float colY = 48.0f;
+
+    // ------------------------------------------------------------------------
+    // LEFT COLUMN: [PL CO-3] COMBAT EVENT STACK (LIFO)
+    // ------------------------------------------------------------------------
+    glBegin(GL_QUADS);
+        glColor4f(0.06f, 0.12f, 0.22f, 0.75f);
+        glVertex2f(leftColX, colY);
+        glVertex2f(leftColX + colW, colY);
+        glVertex2f(leftColX + colW, colY + colH);
+        glVertex2f(leftColX, colY + colH);
+    glEnd();
+    glBegin(GL_LINE_LOOP);
+        glColor4f(0.3f, 0.8f, 1.0f, 0.7f);
+        glVertex2f(leftColX, colY);
+        glVertex2f(leftColX + colW, colY);
+        glVertex2f(leftColX + colW, colY + colH);
+        glVertex2f(leftColX, colY + colH);
+    glEnd();
+
+    float lCurY = colY + colH - 22.0f;
+    drawBitmapString(leftColX + 15.0f, lCurY, GLUT_BITMAP_HELVETICA_12,
+                     "[STACK] COMBAT EVENT HISTORY (LIFO)", 0.3f, 0.95f, 1.0f);
+    lCurY -= 18.0f;
+    std::string stackStatus = "Total Events: " + std::to_string(stack.getSize()) +
+                              "  |  Empty: " + (stack.isEmpty() ? "YES" : "NO");
+    drawBitmapString(leftColX + 15.0f, lCurY, GLUT_BITMAP_HELVETICA_10,
+                     stackStatus, 0.8f, 0.9f, 0.5f);
+
+    lCurY -= 20.0f;
+    drawBitmapString(leftColX + 15.0f, lCurY, GLUT_BITMAP_HELVETICA_10,
+                     "LIFO Rule: Most recent event is on TOP; pop removes top first.",
+                     0.65f, 0.75f, 0.85f);
+
+    // List recent stack items
+    std::vector<CombatEvent> recentEvents = stack.getRecentEvents(8);
+    lCurY -= 25.0f;
+
+    if (recentEvents.empty()) {
+        drawBitmapString(leftColX + 30.0f, lCurY - 30.0f, GLUT_BITMAP_HELVETICA_12,
+                         "< STACK EMPTY - Push events to record combat >", 0.5f, 0.6f, 0.7f);
+    } else {
+        for (size_t i = 0; i < recentEvents.size(); ++i) {
+            const auto& ev = recentEvents[i];
+            float itemY = lCurY - (static_cast<float>(i) * 32.0f);
+
+            // Item card background
+            bool isTop = (i == 0);
+            glBegin(GL_QUADS);
+                if (isTop) glColor4f(0.15f, 0.35f, 0.60f, 0.85f);
+                else       glColor4f(0.08f, 0.16f, 0.28f, 0.65f);
+                glVertex2f(leftColX + 12.0f, itemY - 24.0f);
+                glVertex2f(leftColX + colW - 12.0f, itemY - 24.0f);
+                glVertex2f(leftColX + colW - 12.0f, itemY + 4.0f);
+                glVertex2f(leftColX + 12.0f, itemY + 4.0f);
+            glEnd();
+
+            std::string prefix = isTop ? "TOP -> " : "       ";
+            std::string rowText = prefix + "[#" + std::to_string(ev.eventId) + "] " + ev.description;
+            std::string valText = "(Val: " + std::to_string(ev.value) + ")";
+
+            float r = isTop ? 1.0f : 0.85f;
+            float g = isTop ? 0.95f : 0.85f;
+            float b = isTop ? 0.4f : 0.95f;
+            drawBitmapString(leftColX + 16.0f, itemY - 14.0f, GLUT_BITMAP_HELVETICA_10, rowText + " " + valText, r, g, b);
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // RIGHT COLUMN: [PL CO-3] ENEMY SPAWN WAVE QUEUE (FIFO)
+    // ------------------------------------------------------------------------
+    glBegin(GL_QUADS);
+        glColor4f(0.14f, 0.08f, 0.24f, 0.75f);
+        glVertex2f(rightColX, colY);
+        glVertex2f(rightColX + colW, colY);
+        glVertex2f(rightColX + colW, colY + colH);
+        glVertex2f(rightColX, colY + colH);
+    glEnd();
+    glBegin(GL_LINE_LOOP);
+        glColor4f(0.8f, 0.4f, 1.0f, 0.7f);
+        glVertex2f(rightColX, colY);
+        glVertex2f(rightColX + colW, colY);
+        glVertex2f(rightColX + colW, colY + colH);
+        glVertex2f(rightColX, colY + colH);
+    glEnd();
+
+    float rCurY = colY + colH - 22.0f;
+    drawBitmapString(rightColX + 15.0f, rCurY, GLUT_BITMAP_HELVETICA_12,
+                     "[QUEUE] ENEMY SPAWN CONVEYOR (FIFO)", 0.9f, 0.5f, 1.0f);
+    rCurY -= 18.0f;
+    std::string queueStatus = "Pending Spawns: " + std::to_string(queue.getSize()) +
+                              "  |  Empty: " + (queue.isEmpty() ? "YES" : "NO");
+    drawBitmapString(rightColX + 15.0f, rCurY, GLUT_BITMAP_HELVETICA_10,
+                     queueStatus, 0.8f, 0.9f, 0.5f);
+
+    rCurY -= 20.0f;
+    drawBitmapString(rightColX + 15.0f, rCurY, GLUT_BITMAP_HELVETICA_10,
+                     "FIFO Rule: Enqueue at REAR; Dequeue deploys FRONT first.",
+                     0.75f, 0.7f, 0.85f);
+
+    // List pending queue items
+    std::vector<EnemySpawnRequest> pendingReqs = queue.getPendingRequests(8);
+    rCurY -= 25.0f;
+
+    if (pendingReqs.empty()) {
+        drawBitmapString(rightColX + 30.0f, rCurY - 30.0f, GLUT_BITMAP_HELVETICA_12,
+                         "< QUEUE EMPTY - All wave units deployed >", 0.6f, 0.5f, 0.7f);
+    } else {
+        for (size_t i = 0; i < pendingReqs.size(); ++i) {
+            const auto& rq = pendingReqs[i];
+            float itemY = rCurY - (static_cast<float>(i) * 32.0f);
+
+            bool isFront = (i == 0);
+            bool isRear = (i == pendingReqs.size() - 1 && queue.getSize() > 1);
+
+            glBegin(GL_QUADS);
+                if (isFront)      glColor4f(0.35f, 0.18f, 0.50f, 0.85f);
+                else if (isRear)  glColor4f(0.25f, 0.12f, 0.38f, 0.75f);
+                else              glColor4f(0.16f, 0.10f, 0.25f, 0.65f);
+                glVertex2f(rightColX + 12.0f, itemY - 24.0f);
+                glVertex2f(rightColX + colW - 12.0f, itemY - 24.0f);
+                glVertex2f(rightColX + colW - 12.0f, itemY + 4.0f);
+                glVertex2f(rightColX + 12.0f, itemY + 4.0f);
+            glEnd();
+
+            std::string tag = isFront ? "FRONT -> " : (isRear ? " REAR -> " : "         ");
+            std::string rowText = tag + "[#" + std::to_string(rq.requestId) + "] " + rq.enemyType +
+                                  " at (" + std::to_string(static_cast<int>(rq.spawnX)) + "," +
+                                  std::to_string(static_cast<int>(rq.spawnY)) + ") HP:" + std::to_string(rq.health);
+
+            float r = isFront ? 0.3f : 0.9f;
+            float g = isFront ? 0.95f : 0.7f;
+            float b = isFront ? 0.5f : 1.0f;
+            drawBitmapString(rightColX + 16.0f, itemY - 14.0f, GLUT_BITMAP_HELVETICA_10, rowText, r, g, b);
+        }
+    }
+
+    // 3. Bottom Controls Bar
+    float barY = 22.0f;
+    drawBitmapString(leftColX + 10.0f, barY, GLUT_BITMAP_HELVETICA_10,
+                     "[1] Push Event  |  [2] Pop Event  |  [3] Enqueue Enemy  |  [4] Dequeue Enemy  |  [C] Clear Both  |  [O] Resume Space Flight",
+                     0.3f, 0.95f, 1.0f);
+}

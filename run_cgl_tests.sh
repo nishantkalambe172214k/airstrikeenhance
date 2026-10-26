@@ -23,7 +23,7 @@ fi
 # 2. Compile and Run Transformations Tests (CO-2)
 echo ""
 echo "[2/5] Compiling and running CGL Transformation Pipeline Tests..."
-g++ -std=c++11 -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/tests/test_transformations.cpp -o bin/test_transformations -framework OpenGL -framework GLUT
+g++ -std=c++11 -I./CGL/src -I./PL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp PL/src/CombatEventStack.cpp PL/src/EnemySpawnQueue.cpp CGL/tests/test_transformations.cpp -o bin/test_transformations -framework OpenGL -framework GLUT
 if [ $? -ne 0 ]; then
     echo "[ERROR] Failed to compile test_transformations."
     exit 1

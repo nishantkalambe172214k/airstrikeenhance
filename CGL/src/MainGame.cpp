@@ -20,6 +20,8 @@
 #include "../../PL/src/BulletPoolArray.h"
 #include "../../PL/src/EnemyLinkedList.h"
 #include "../../PL/src/AsteroidGridMatrix.h"
+#include "../../PL/src/CombatEventStack.h"
+#include "../../PL/src/EnemySpawnQueue.h"
 #include "../../COA/ALU/ALU80386.h"
 #include "Renderer.h"
 #include "Bresenham.h"
@@ -36,11 +38,18 @@ Renderer renderer;
 BulletPoolArray bulletPool;
 EnemyLinkedList enemyList;
 AsteroidGridMatrix asteroidGrid;
+CombatEventStack combatStack; // [PL CO-3] LIFO Combat Event History Stack
+EnemySpawnQueue spawnQueue;   // [PL CO-3] FIFO Enemy Wave Spawn Queue
 ALU80386 alu;
 NetworkBridge psoopBridge;
 RemoteGameState psoopState;
 std::vector<RemoteEnemy> psoopEnemies;
 bool psoopOnline = false;
+
+// [PL CO-3] State variables for Stack/Queue Inspector and Staggered Wave Spawning
+bool isPLDemoActive = false;
+int spawnStaggerTimer = 0;
+float gameSimulationTime = 0.0f;
 
 float playerX = 100.0f;
 float playerY = 300.0f;
@@ -152,6 +161,13 @@ Mesh3D asteroid3D;
 
 void spawnEnemyWave(int waveNumber) {
     enemyList.clear();
+    spawnQueue.clear();
+    spawnStaggerTimer = 0;
+
+    // [PL CO-3] Push wave initiation event onto LIFO combat stack
+    combatStack.recordEvent(CombatEventType::WAVE_CLEARED,
+                            "Wave #" + std::to_string(waveNumber) + " Inbound",
+                            waveNumber * 500, gameSimulationTime);
 
     if (psoopOnline) {
         psoopEnemies.clear();
@@ -161,7 +177,17 @@ void spawnEnemyWave(int waveNumber) {
             for (const auto& re : psoopEnemies) {
                 float vx = (re.type == "BOSS") ? -0.8f : ((re.type == "FIGHTER") ? -2.2f : -3.0f);
                 float vy = 0.0f;
-                enemyList.addEnemy(re.id, re.x, re.y, vx, vy, re.health, re.maxHealth, re.scoreValue, re.collisionDamage, 0.0f);
+                // [PL CO-3] Enqueue into FIFO EnemySpawnQueue
+                spawnQueue.queueSpawn(re.type, re.x, re.y, vx, vy, re.health, re.maxHealth, re.scoreValue, re.collisionDamage);
+            }
+            // Dequeue first batch immediately so combat starts promptly
+            EnemySpawnRequest immediateReq;
+            for (int k = 0; k < 2 && !spawnQueue.isEmpty(); ++k) {
+                if (spawnQueue.dequeue(immediateReq)) {
+                    enemyList.addEnemy(immediateReq.requestId, immediateReq.spawnX, immediateReq.spawnY,
+                                       immediateReq.vx, immediateReq.vy, immediateReq.health, immediateReq.maxHealth,
+                                       immediateReq.scoreValue, immediateReq.collisionDamage, 0.0f);
+                }
             }
             asteroidGrid.generateProceduralWave(waveNumber, WINDOW_WIDTH, WINDOW_HEIGHT, 850.0f);
             return;
@@ -173,12 +199,23 @@ void spawnEnemyWave(int waveNumber) {
               << " (" << count << " Alien Drones & Asteroid Field Approaching!) <<<\n";
 
     for (int i = 0; i < count; ++i) {
-        int id = nextEnemyId++;
         float x = 820.0f + (i * 70.0f);
         float y = 80.0f + static_cast<float>(rand() % (WINDOW_HEIGHT - 160));
         float vx = -(1.8f + static_cast<float>(rand() % 15) / 10.0f);
         float vy = (static_cast<float>(rand() % 20) - 10.0f) / 10.0f;
-        enemyList.addEnemy(id, x, y, vx, vy, 40, 40, 100, 25, 0.0f);
+        std::string eType = (i % 3 == 0) ? "FIGHTER" : "DRONE";
+        // [PL CO-3] Enqueue wave units into FIFO queue in strict arrival order (O(1))
+        spawnQueue.queueSpawn(eType, x, y, vx, vy, 40, 40, 100, 25);
+    }
+
+    // [PL CO-3] Dequeue initial wave vanguard from front of FIFO queue (O(1))
+    EnemySpawnRequest immediateReq;
+    for (int k = 0; k < 2 && !spawnQueue.isEmpty(); ++k) {
+        if (spawnQueue.dequeue(immediateReq)) {
+            enemyList.addEnemy(immediateReq.requestId, immediateReq.spawnX, immediateReq.spawnY,
+                               immediateReq.vx, immediateReq.vy, immediateReq.health, immediateReq.maxHealth,
+                               immediateReq.scoreValue, immediateReq.collisionDamage, 0.0f);
+        }
     }
 
     // Generate 2D Matrix Asteroid Field (PL CO-2)
@@ -199,6 +236,12 @@ void restartGame() {
     currentWave = 1;
     fireCooldown = 0;
 
+    // [PL CO-3] Reset Stack and Queue data structures
+    combatStack.clear();
+    spawnQueue.clear();
+    spawnStaggerTimer = 0;
+    gameSimulationTime = 0.0f;
+
     if (psoopOnline) {
         psoopBridge.resetGame();
     }
@@ -208,7 +251,7 @@ void restartGame() {
 }
 
 void handleInput() {
-    if (isGameOver || isHangar3DActive || isDemoModeActive) return;
+    if (isGameOver || isHangar3DActive || isDemoModeActive || isPLDemoActive) return;
 
     float dx = 0.0f;
     float dy = 0.0f;
@@ -255,6 +298,7 @@ void updateGame() {
     if (isGameOver) return;
 
     float delta = 1.0f / TARGET_FPS;
+    gameSimulationTime += delta;
 
     renderer.updateStarfield(WINDOW_WIDTH, WINDOW_HEIGHT, delta);
     bulletPool.updateBullets(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT);
@@ -262,6 +306,21 @@ void updateGame() {
 
     radarSweepAngle += 0.06f;
     if (radarSweepAngle > 6.2831853f) radarSweepAngle -= 6.2831853f;
+
+    // [PL CO-3] Process FIFO EnemySpawnQueue: Dequeue and deploy next staged wave unit
+    if (!spawnQueue.isEmpty()) {
+        if (spawnStaggerTimer <= 0) {
+            EnemySpawnRequest nextReq;
+            if (spawnQueue.dequeue(nextReq)) {
+                enemyList.addEnemy(nextReq.requestId, nextReq.spawnX, nextReq.spawnY,
+                                   nextReq.vx, nextReq.vy, nextReq.health, nextReq.maxHealth,
+                                   nextReq.scoreValue, nextReq.collisionDamage, 0.0f);
+                spawnStaggerTimer = 22; // Stagger deployment by ~360ms
+            }
+        } else {
+            spawnStaggerTimer--;
+        }
+    }
 
     // Nearest enemy targeting logic for Bresenham reticle tracking
     float nearestDistSq = 999999.0f;
@@ -321,7 +380,8 @@ void updateGame() {
         }
     }
 
-    if (enemyList.isEmpty()) {
+    // [PL CO-3] Advance wave only when both active enemy list and pending spawn queue are cleared
+    if (enemyList.isEmpty() && spawnQueue.isEmpty()) {
         currentWave++;
         spawnEnemyWave(currentWave);
     }
@@ -349,6 +409,10 @@ void updateGame() {
                     if (psoopOnline) {
                         psoopBridge.sendAluFeedback(0, bounty, alu.getEAX(), alu.getEDX(), alu.getZF(), alu.getSF(), alu.getCF());
                     }
+                    // [PL CO-3] Push combat event onto LIFO stack (O(1))
+                    combatStack.recordEvent(CombatEventType::ENEMY_DESTROYED,
+                                            "Neutralized Enemy #" + std::to_string(destroyedId),
+                                            bounty, gameSimulationTime);
                     enemyList.removeEnemy(destroyedId);
                 }
                 break;
@@ -367,6 +431,10 @@ void updateGame() {
                 asteroidGrid.damageAsteroid(hitR, hitC, bullets[bIdx].damage, destroyed);
                 if (destroyed) {
                     playerScore = alu.computeScoreAdd(playerScore, bounty, true);
+                    // [PL CO-3] Push asteroid destruction event onto LIFO stack (O(1))
+                    combatStack.recordEvent(CombatEventType::ASTEROID_DESTROYED,
+                                            "Pulverized Asteroid (" + std::to_string(hitR) + "," + std::to_string(hitC) + ")",
+                                            bounty, gameSimulationTime);
                 }
             }
         }
@@ -385,17 +453,28 @@ void updateGame() {
                 int hitEnemyId = eNode->data.id;
                 enemyList.removeEnemy(hitEnemyId);
 
+                int absorbed = 0;
                 if (playerShield > 0) {
                     if (playerShield >= damage) {
                         playerShield -= damage;
+                        absorbed = damage;
                         damage = 0;
                     } else {
+                        absorbed = playerShield;
                         damage -= playerShield;
                         playerShield = 0;
                     }
+                    // [PL CO-3] Record shield deflection on LIFO stack
+                    combatStack.recordEvent(CombatEventType::SHIELD_ABSORB,
+                                            "Shield Absorbed Collision",
+                                            absorbed, gameSimulationTime);
                 }
 
                 if (damage > 0) {
+                    // [PL CO-3] Record hull breach on LIFO stack
+                    combatStack.recordEvent(CombatEventType::HULL_DAMAGE,
+                                            "Hull Collision with Enemy #" + std::to_string(hitEnemyId),
+                                            damage, gameSimulationTime);
                     bool fatal = false;
                     playerHealth = static_cast<int>(alu.computeHealthDamage(
                         static_cast<uint32_t>(playerHealth),
@@ -426,17 +505,28 @@ void updateGame() {
             int damage = hitAst.collisionDamage;
             asteroidGrid.deactivate(hitR, hitC);
 
+            int absorbed = 0;
             if (playerShield > 0) {
                 if (playerShield >= damage) {
                     playerShield -= damage;
+                    absorbed = damage;
                     damage = 0;
                 } else {
+                    absorbed = playerShield;
                     damage -= playerShield;
                     playerShield = 0;
                 }
+                // [PL CO-3] Record shield deflection on LIFO stack
+                combatStack.recordEvent(CombatEventType::SHIELD_ABSORB,
+                                        "Shield Deflected Asteroid",
+                                        absorbed, gameSimulationTime);
             }
 
             if (damage > 0) {
+                // [PL CO-3] Record asteroid collision on LIFO stack
+                combatStack.recordEvent(CombatEventType::HULL_DAMAGE,
+                                        "Asteroid Hull Collision",
+                                        damage, gameSimulationTime);
                 bool fatal = false;
                 playerHealth = static_cast<int>(alu.computeHealthDamage(
                     static_cast<uint32_t>(playerHealth),
@@ -541,10 +631,10 @@ void display() {
                                    0.95f, 0.75f, 0.2f);
     }
 
-    // 6c. Render CGL CO-3 Algorithm Telemetry Banner
-    std::string fillStatus = (renderer.isScanLineFillEnabled() ? "[F] SCANLINE: ON" : "[F] SCANLINE: OFF") +
-                             std::string("  |  [M] 2D FILL DEMO  |  [H] 3D HANGAR");
-    Renderer::drawBitmapString(WINDOW_WIDTH - 420.0f, WINDOW_HEIGHT - 40.0f, GLUT_BITMAP_HELVETICA_10,
+    // 6c. Render CGL CO-3 Algorithm & PL Telemetry Banner
+    std::string fillStatus = (renderer.isScanLineFillEnabled() ? "[F] SCAN: ON" : "[F] SCAN: OFF") +
+                             std::string(" | [M] 2D FILL | [H] 3D | [O] PL STACK/QUEUE");
+    Renderer::drawBitmapString(WINDOW_WIDTH - 440.0f, WINDOW_HEIGHT - 40.0f, GLUT_BITMAP_HELVETICA_10,
                                fillStatus, 0.3f, 0.95f, 0.95f);
 
     // 7. Render Bresenham Radar Minimap (CGL CO-2)
@@ -579,6 +669,11 @@ void display() {
                                            demoColorIndex, demoBuffer, WINDOW_WIDTH, WINDOW_HEIGHT);
     }
 
+    // 9. Render PL CO-3 Stack (LIFO) & Queue (FIFO) Inspector Overlay (if active)
+    if (isPLDemoActive) {
+        renderer.renderPLDemoOverlay(combatStack, spawnQueue, WINDOW_WIDTH, WINDOW_HEIGHT);
+    }
+
     glutSwapBuffers();
 }
 
@@ -589,7 +684,7 @@ void timer(int) {
             hangarRotY += 1.2f;
             if (hangarRotY >= 360.0f) hangarRotY -= 360.0f;
         }
-    } else if (!isDemoModeActive) {
+    } else if (!isDemoModeActive && !isPLDemoActive) {
         updateGame();
     }
     glutPostRedisplay();
@@ -662,10 +757,62 @@ void keyDown(unsigned char key, int, int) {
         }
         return;
     }
+    // [PL CO-3] Toggle Programming Lab Stack (LIFO) & Queue (FIFO) Demonstrator Overlay
+    if (key == 'o' || key == 'O') {
+        isPLDemoActive = !isPLDemoActive;
+        if (isPLDemoActive) {
+            isDemoModeActive = false; // prioritize PL demo
+            isHangar3DActive = false;
+            std::cout << "\n>>> [PL CO-3] Opened Stack (LIFO) & Queue (FIFO) Inspector Overlay <<<\n";
+        } else {
+            std::cout << "\n>>> [PL CO-3] Resumed Space Combat <<<\n";
+        }
+    }
+    // [PL CO-3] Interactive Stack and Queue Controls (Push/Pop/Enqueue/Dequeue/Clear)
+    if (isPLDemoActive) {
+        if (key == '1') {
+            // [PL CO-3] Push simulated combat event onto LIFO stack
+            combatStack.recordEvent(CombatEventType::ENEMY_DESTROYED,
+                                    "Manual Test Target Neutralized", 150, gameSimulationTime);
+            std::cout << " -> [PL CO-3] Pushed event onto Combat Stack (Total: " << combatStack.getSize() << ")\n";
+        } else if (key == '2') {
+            // [PL CO-3] Pop top event from LIFO stack
+            CombatEvent popped;
+            if (combatStack.pop(popped)) {
+                std::cout << " -> [PL CO-3] Popped Top Event: " << popped.description
+                          << " (Remaining: " << combatStack.getSize() << ")\n";
+            } else {
+                std::cout << " -> [PL CO-3] Cannot Pop: Combat Stack is Empty!\n";
+            }
+        } else if (key == '3') {
+            // [PL CO-3] Enqueue test enemy spawn request into FIFO queue
+            float sy = 100.0f + static_cast<float>(rand() % (WINDOW_HEIGHT - 200));
+            spawnQueue.queueSpawn("DRONE", 840.0f, sy, -2.5f, 0.0f, 40, 40, 100, 20);
+            std::cout << " -> [PL CO-3] Enqueued Enemy Spawn at Y=" << sy
+                      << " (Total Pending: " << spawnQueue.getSize() << ")\n";
+        } else if (key == '4') {
+            // [PL CO-3] Dequeue front enemy spawn request from FIFO queue
+            EnemySpawnRequest dequeued;
+            if (spawnQueue.dequeue(dequeued)) {
+                std::cout << " -> [PL CO-3] Dequeued Front Spawn Request: #" << dequeued.requestId
+                          << " " << dequeued.enemyType << " (Remaining: " << spawnQueue.getSize() << ")\n";
+            } else {
+                std::cout << " -> [PL CO-3] Cannot Dequeue: Spawn Queue is Empty!\n";
+            }
+        } else if (key == 'c' || key == 'C') {
+            // [PL CO-3] Clear both data structures
+            combatStack.clear();
+            spawnQueue.clear();
+            std::cout << " -> [PL CO-3] Cleared Combat Stack and Spawn Queue.\n";
+        }
+        return;
+    }
+
     // [CGL CO-3] Toggle 2D Area-Fill Demonstrator Overlay (Flood-Fill & Boundary-Fill)
     if (key == 'm' || key == 'M' || key == '\t') {
         isDemoModeActive = !isDemoModeActive;
         if (isDemoModeActive) {
+            isPLDemoActive = false;
             updateAreaFillDemo();
             std::cout << "\n>>> [CGL CO-3] Opened CG Algorithm Demonstrator (Flood-Fill & Boundary-Fill) <<<\n";
         } else {

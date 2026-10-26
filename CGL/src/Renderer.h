@@ -26,6 +26,8 @@ struct Point2D {
 
 class PixelBuffer;
 class Mesh3D;
+class CombatEventStack;
+class EnemySpawnQueue;
 
 // Represents an individual star in the multi-tier parallax starfield
 struct Star {
@@ -96,6 +98,11 @@ public:
     void render3DHangarScene(int modelType, bool wireframe, float rotX, float rotY, float rotZ,
                              float scale, const Mesh3D& shipMesh, const Mesh3D& asteroidMesh,
                              int screenW, int screenH);
+
+    // [PL CO-3] Programming Lab Demonstration Overlay: Stack (LIFO) & Queue (FIFO) Inspector
+    void renderPLDemoOverlay(const CombatEventStack& stack,
+                             const EnemySpawnQueue& queue,
+                             float screenW, float screenH);
 
     static void drawBitmapString(float x, float y, void* font, const std::string& text, float r, float g, float b);
 };
