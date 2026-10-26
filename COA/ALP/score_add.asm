@@ -1,29 +1,32 @@
-.386
-.MODEL FLAT, STDCALL
-.STACK 4096
+; ============================================================================
+; [COA CO3] 64-BIT ASSEMBLY: SCORE ADDITION (x86_64 Architecture Upgrade)
+; Upgraded from legacy 32-bit 80386 (EAX, EDX, DWORD) to 64-bit (RAX, RDX, QWORD)
+; ============================================================================
 
-.DATA
-    current_score   DWORD   1500
-    score_increment DWORD   250
-    final_score     DWORD   ?
-    score_overflow  BYTE    0
+default rel
 
-.CODE
-main PROC
-    MOV     EAX, [current_score]
-    MOV     EDX, [score_increment]
-    ADD     EAX, EDX
+section .data
+    current_score   dq  1500            ; [COA CO3] 64-bit Quadword integer
+    score_increment dq  250             ; [COA CO3] 64-bit Quadword integer
+    final_score     dq  0               ; [COA CO3] 64-bit result holder
+    score_overflow  db  0               ; Overflow indicator flag
 
-    JC      handle_carry
+section .text
+global score_add_main
+score_add_main:
+    ; [COA CO3] Load 64-bit registers RAX and RDX
+    mov     rax, [current_score]
+    mov     rdx, [score_increment]
+    add     rax, rdx                    ; [COA CO3] 64-bit ADD RAX, RDX
 
-    MOV     [final_score], EAX
-    JMP     done
+    jc      handle_carry                ; Jump if carry flag (CF=1) set
+
+    mov     [final_score], rax
+    jmp     done
 
 handle_carry:
-    MOV     [score_overflow], 1
-    MOV     [final_score], 0FFFFFFFFh
+    mov     byte [score_overflow], 1
+    mov     qword [final_score], 0xFFFFFFFFFFFFFFFF ; 64-bit maximum clamp
 
 done:
-    RET
-main ENDP
-END main
+    ret

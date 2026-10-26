@@ -41,8 +41,11 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-echo [6/12] Compiling Computer Organization ^& Architecture (COA) ALU Simulator...
-g++ -std=c++11 -I./COA/ALU COA/ALU/ALU80386.cpp COA/ALU/test_alu.cpp -o bin/test_alu.exe
+echo [6/12] Compiling Computer Organization ^& Architecture (COA) 64-bit ALU Simulator ^& Assembly (CO-3)...
+nasm -f win64 COA\ALP\coa_co3_arithmetic.asm -o COA\ALP\coa_co3_arithmetic.obj
+nasm -f win64 COA\ALP\coa_co3_string.asm -o COA\ALP\coa_co3_string.obj
+g++ -std=c++11 -I./COA/ALU -I./COA/ALP COA/ALU/ALU80386.cpp COA/ALU/test_alu.cpp COA\ALP\coa_co3_arithmetic.obj COA\ALP\coa_co3_string.obj -o bin/test_alu.exe
+g++ -std=c++11 -I./COA/ALU -I./COA/ALP COA/ALU/ALU80386.cpp COA/ALU/test_coa_co3.cpp COA\ALP\coa_co3_arithmetic.obj COA\ALP\coa_co3_string.obj -o bin/test_coa_co3.exe
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to compile COA ALU tests.
     exit /b 1
@@ -84,7 +87,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [12/12] Compiling Computer Graphics Lab (CGL) Integrated Desktop Game (CO-3)...
-g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp PL/src/CombatEventStack.cpp PL/src/EnemySpawnQueue.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
+g++ -std=c++11 -I./PL/src -I./COA/ALU -I./COA/ALP -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp PL/src/CombatEventStack.cpp PL/src/EnemySpawnQueue.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp COA\ALP\coa_co3_arithmetic.obj COA\ALP\coa_co3_string.obj -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to compile CGL game executable.
     exit /b 1

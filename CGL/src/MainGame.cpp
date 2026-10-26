@@ -23,6 +23,7 @@
 #include "../../PL/src/CombatEventStack.h"
 #include "../../PL/src/EnemySpawnQueue.h"
 #include "../../COA/ALU/ALU80386.h"
+#include "../../COA/ALP/COA_CO3_Assembly.h" // [COA CO3] 64-bit Assembly arithmetic & string interface
 #include "Renderer.h"
 #include "Bresenham.h"
 #include "NetworkBridge.h"
@@ -69,6 +70,11 @@ const int FIRE_COOLDOWN_TICKS = 9;
 
 int currentWave = 1;
 int nextEnemyId = 100;
+
+// [COA CO3] Pilot callsign string processed via 64-bit Assembly (asm_str_to_upper, asm_str_length)
+char pilotCallsignRaw[32] = "viper-strike_01";
+char pilotCallsignUpper[32] = "VIPER-STRIKE_01";
+uint64_t pilotCallsignLen = 15;
 
 float radarSweepAngle = 0.0f;
 float lockOnProgress = 0.0f;
@@ -404,7 +410,10 @@ void updateGame() {
 
                 if (eNode->data.health <= 0) {
                     int destroyedId = eNode->data.id;
-                    int bounty = eNode->data.scoreValue;
+                    int baseBounty = eNode->data.scoreValue;
+                    // [COA CO3] Wave combo bounty calculated via 64-bit Add-and-Shift binary multiplication in Assembly
+                    int comboMult = (currentWave > 1) ? currentWave : 1;
+                    int bounty = static_cast<int>(alu.computeScoreMultiplier(baseBounty, comboMult, false));
                     playerScore = alu.computeScoreAdd(playerScore, bounty, true);
                     if (psoopOnline) {
                         psoopBridge.sendAluFeedback(0, bounty, alu.getEAX(), alu.getEDX(), alu.getZF(), alu.getSF(), alu.getCF());
@@ -637,6 +646,11 @@ void display() {
     Renderer::drawBitmapString(WINDOW_WIDTH - 440.0f, WINDOW_HEIGHT - 40.0f, GLUT_BITMAP_HELVETICA_10,
                                fillStatus, 0.3f, 0.95f, 0.95f);
 
+    // [COA CO3] 64-bit ALU & String Processing Telemetry Banner
+    std::string coaStatus = "PILOT: " + std::string(pilotCallsignUpper) + " | 64-BIT ALU (RAX: " + std::to_string(alu.getRAX()) + ")";
+    Renderer::drawBitmapString(WINDOW_WIDTH - 440.0f, WINDOW_HEIGHT - 54.0f, GLUT_BITMAP_HELVETICA_10,
+                               coaStatus, 0.95f, 0.85f, 0.3f);
+
     // 7. Render Bresenham Radar Minimap (CGL CO-2)
     std::vector<Point2D> enemyPos;
     EnemyNode* enm = enemyList.getHead();
@@ -863,7 +877,10 @@ int main(int argc, char** argv) {
     std::cout << "  [PL/DS] Fixed Array Bullet Pool: Active (Cap: " << bulletPool.getCapacity() << ")\n";
     std::cout << "  [PL/DS] Singly Linked List Enemy Manager: Active\n";
     std::cout << "  [PL/DS] 2D Array Asteroid Grid Matrix: Active (" << asteroidGrid.getRows() << "x" << asteroidGrid.getCols() << " Matrix)\n";
-    std::cout << "  [COA]   80386 ALU Simulator: Initialized\n";
+    // [COA CO3] 64-bit Assembly String Processing: convert pilot callsign to uppercase and compute length
+    pilotCallsignLen = alu.executeStringToUpper(pilotCallsignRaw, pilotCallsignUpper, sizeof(pilotCallsignUpper), false);
+    std::cout << "  [COA CO3] 64-Bit x86_64 ALU & Assembly Engine: Active (RAX/RDX/RCX/RBX)\n";
+    std::cout << "  [COA CO3] Pilot Callsign: " << pilotCallsignUpper << " (" << pilotCallsignLen << " bytes via asm_str_to_upper)\n";
     std::cout << "  [CGL]   OpenGL Geometric Primitive Renderer: Initialized\n";
     std::cout << "  [CGL]   Mid-point Bresenham Line & Circle Algorithms: Active\n";
     std::cout << "  [CGL]   Scan-Line ET/AET, Flood-Fill & Boundary-Fill: Active (CO-3)\n";

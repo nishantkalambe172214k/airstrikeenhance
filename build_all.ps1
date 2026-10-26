@@ -26,8 +26,11 @@ Write-Host "[5/12] Compiling Problem Solving using OOP (PSOOP) Java Module..." -
 javac -d bin/psoop PSOOP/src/exception/*.java PSOOP/src/model/*.java PSOOP/src/service/*.java PSOOP/src/ui/*.java PSOOP/src/test/*.java
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile PSOOP Java sources."; exit 1 }
 
-Write-Host "[6/12] Compiling Computer Organization & Architecture (COA) ALU Simulator..." -ForegroundColor Yellow
-g++ -std=c++11 -I./COA/ALU COA/ALU/ALU80386.cpp COA/ALU/test_alu.cpp -o bin/test_alu.exe
+Write-Host "[6/12] Compiling Computer Organization & Architecture (COA) 64-bit ALU Simulator & Assembly (CO-3)..." -ForegroundColor Yellow
+nasm -f win64 COA\ALP\coa_co3_arithmetic.asm -o COA\ALP\coa_co3_arithmetic.obj
+nasm -f win64 COA\ALP\coa_co3_string.asm -o COA\ALP\coa_co3_string.obj
+g++ -std=c++11 -I./COA/ALU -I./COA/ALP COA/ALU/ALU80386.cpp COA/ALU/test_alu.cpp COA\ALP\coa_co3_arithmetic.obj COA\ALP\coa_co3_string.obj -o bin/test_alu.exe
+g++ -std=c++11 -I./COA/ALU -I./COA/ALP COA/ALU/ALU80386.cpp COA/ALU/test_coa_co3.cpp COA\ALP\coa_co3_arithmetic.obj COA\ALP\coa_co3_string.obj -o bin/test_coa_co3.exe
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile COA ALU tests."; exit 1 }
 
 Write-Host "[7/12] Compiling Computer Graphics Lab (CGL) Transformation Tests (CO-2)..." -ForegroundColor Yellow
@@ -51,7 +54,7 @@ g++ -std=c++11 -I./CGL/src CGL/src/Mesh3D.cpp CGL/tests/test_3d_pipeline.cpp -o 
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL 3D pipeline tests."; exit 1 }
 
 Write-Host "[12/12] Compiling Computer Graphics Lab (CGL) Integrated Desktop Game (CO-3)..." -ForegroundColor Yellow
-g++ -std=c++11 -I./PL/src -I./COA/ALU -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp PL/src/CombatEventStack.cpp PL/src/EnemySpawnQueue.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
+g++ -std=c++11 -I./PL/src -I./COA/ALU -I./COA/ALP -I./CGL/src CGL/src/Renderer.cpp CGL/src/Bresenham.cpp CGL/src/ScanLineFiller.cpp CGL/src/AreaFill.cpp CGL/src/Mesh3D.cpp CGL/src/NetworkBridge.cpp PL/src/BulletPoolArray.cpp PL/src/EnemyLinkedList.cpp PL/src/AsteroidGridMatrix.cpp PL/src/CombatEventStack.cpp PL/src/EnemySpawnQueue.cpp COA/ALU/ALU80386.cpp CGL/src/MainGame.cpp COA\ALP\coa_co3_arithmetic.obj COA\ALP\coa_co3_string.obj -o bin/AirStriker_CO1.exe -lopengl32 -lglu32 -lglut32 -lws2_32
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to compile CGL game executable."; exit 1 }
 
 # Ensure glut32.dll is located next to the executable
