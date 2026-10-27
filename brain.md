@@ -87,7 +87,6 @@ AirStriker/
 ├── run_pl_tests.bat                    # Automated test runner for PL C++ Bullet Pool
 ├── run_psoop_tests.bat                 # Automated test runner for PSOOP Java classes
 ├── run_coa_tests.bat                   # Automated test runner for COA 80386 ALU Simulator
-├── glut32.dll                          # OpenGL Utility Toolkit runtime library for Windows
 │
 ├── bin/                                # Compiled Executable Binaries & Bytecode
 │   ├── AirStriker_CO1.exe              # Playable 60 FPS Desktop Game (CGL + PL + COA)

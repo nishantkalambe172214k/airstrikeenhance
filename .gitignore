@@ -1,0 +1,16 @@
+# Compiled Object and Assembly intermediate files
+*.o
+*.obj
+
+# Stale / IDE build output folders
+PSOOP/bin/
+
+# Operating System temporary and metadata files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE swap and backup files
+*.tmp
+*.bak
+*~
