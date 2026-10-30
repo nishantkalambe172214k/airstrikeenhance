@@ -344,7 +344,9 @@ public class GameEngine {
             spawnWave(3 + currentWave);
         }
 
-        if (!player.isAlive() && player.getLives() <= 0) {
+        if (!player.isAlive() || player.getLives() <= 0) {
+            player.setActive(false);
+            player.setLives(0);
             running = false;
             logEvent(String.format("[GAME OVER] Mission terminated for Pilot %s. Final Score: %d",
                     player.getName(), player.getScore()));

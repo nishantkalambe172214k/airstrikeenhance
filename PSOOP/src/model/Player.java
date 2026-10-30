@@ -105,11 +105,16 @@ public class Player extends Character {
             super.takeDamage(remainingDamage);
         }
 
-        if (!isAlive() && this.lives > 1) {
-            this.lives--;
-            setHealth(getMaxHealth());
-            this.shield = 25;
-            setActive(true);
+        if (!isAlive()) {
+            if (this.lives > 1) {
+                this.lives--;
+                setHealth(getMaxHealth());
+                this.shield = 25;
+                setActive(true);
+            } else {
+                this.lives = 0;
+                setActive(false);
+            }
         }
 
         return amount;

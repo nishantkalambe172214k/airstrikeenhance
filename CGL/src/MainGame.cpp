@@ -544,6 +544,10 @@ void updateGame() {
                     true
                 ));
 
+                if (psoopOnline) {
+                    psoopBridge.sendAluFeedback(damage, 0, alu.getEAX(), alu.getEDX(), alu.getZF(), alu.getSF(), alu.getCF());
+                }
+
                 if (fatal || playerHealth <= 0) {
                     playerHealth = 0;
                     playerAlive = false;

@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,16 +21,24 @@ import java.util.regex.Pattern;
  * managed PostgreSQL on Supabase Cloud.
  * Uses standard java.net.http.HttpClient (JDK 11+) with asynchronous execution.
  */
+//URL
+
 public class SupabaseClient {
     public static final String SUPABASE_URL = "https://yuuyftdzmpxwgmbulrgf.supabase.co/rest/v1";
     public static final String PUBLISHABLE_KEY = "sb_publishable_IZXDAV3NBzj4B9PONHfLYQ_KmDT--bf";
 
     private static final HttpClient client = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(3))
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(10))
             .build();
 
+    /** Dedup guard: maps "callsign|score" → last submission timestamp (ms). */
+    private static final ConcurrentHashMap<String, Long> recentSubmissions = new ConcurrentHashMap<>();
+    /** Minimum gap (ms) between identical callsign+score submissions. */
+    private static final long DEDUP_WINDOW_MS = 10_000L;
+
     /**
-     * Checks if Supabase Cloud is reachable within 2 seconds.
+     * Checks if Supabase Cloud is reachable within 5 seconds.
      */
     public static boolean isCloudReachable() {
         try {
@@ -37,7 +46,7 @@ public class SupabaseClient {
                     .uri(URI.create(SUPABASE_URL + "/leaderboard?select=record_id&limit=1"))
                     .header("apikey", PUBLISHABLE_KEY)
                     .header("Authorization", "Bearer " + PUBLISHABLE_KEY)
-                    .timeout(Duration.ofSeconds(2))
+                    .timeout(Duration.ofSeconds(6))
                     .GET()
                     .build();
 
@@ -61,7 +70,7 @@ public class SupabaseClient {
                     .uri(URI.create(endpoint))
                     .header("apikey", PUBLISHABLE_KEY)
                     .header("Authorization", "Bearer " + PUBLISHABLE_KEY)
-                    .timeout(Duration.ofSeconds(4))
+                    .timeout(Duration.ofSeconds(12))
                     .GET()
                     .build();
 
@@ -119,6 +128,17 @@ public class SupabaseClient {
             return false;
         }
 
+        // Dedup guard: skip if an identical score was submitted in the last DEDUP_WINDOW_MS
+        final String dedupKey = callsign.trim() + "|" + score;
+        final long now = System.currentTimeMillis();
+        final Long lastSent = recentSubmissions.get(dedupKey);
+        if (lastSent != null && (now - lastSent) < DEDUP_WINDOW_MS) {
+            System.out.printf("[SupabaseClient] >>> Skipping duplicate submission for %s (score %d) — already sent %dms ago.%n",
+                    callsign.trim(), score, now - lastSent);
+            return true; // treat as success — score is already in cloud
+        }
+        recentSubmissions.put(dedupKey, now);
+
         final String cleanCallsign = callsign.trim().replaceAll("\"", "");
         final String jsonPayload = String.format(
                 "{\"callsign\":\"%s\",\"score\":%d,\"wave_reached\":%d}",
@@ -132,7 +152,7 @@ public class SupabaseClient {
                     .header("Authorization", "Bearer " + PUBLISHABLE_KEY)
                     .header("Content-Type", "application/json")
                     .header("Prefer", "return=representation")
-                    .timeout(Duration.ofSeconds(4))
+                    .timeout(Duration.ofSeconds(12))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                     .build();
 
@@ -148,7 +168,16 @@ public class SupabaseClient {
      * Non-blocking asynchronous submission. Does NOT block game loop frame execution.
      */
     public static CompletableFuture<Boolean> submitScoreAsync(final String callsign, final int score, final int wave) {
-        return CompletableFuture.supplyAsync(() -> submitScoreSync(callsign, score, wave));
+        return CompletableFuture.supplyAsync(() -> {
+            boolean success = submitScoreSync(callsign, score, wave);
+            if (success) {
+                System.out.printf("[SupabaseClient] >>> Live score submitted to Supabase: %s | Score: %d | Wave: %d%n",
+                        callsign, score, wave);
+            } else {
+                System.err.printf("[SupabaseClient] >>> Score submission failed for %s (offline fallback retained)%n", callsign);
+            }
+            return success;
+        });
     }
 
     // --- Helper Utilities for Lightweight JSON Parsing ---

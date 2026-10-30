@@ -52,6 +52,7 @@ import java.util.Set;
  *    - Catches GameOverException and transitions to game-over overlay with restart guide.
  * 4. Modular Packages: ui package communicating cleanly with service, model, exception.
  */
+
 public class GamePanel extends JPanel implements ActionListener, KeyListener {
     public static final int PANEL_WIDTH = 850;
     public static final int PANEL_HEIGHT = 620;
@@ -95,6 +96,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private boolean overheatAlertActive = false;
     private int overheatAlertTimer = 0;
     private long animationFrame = 0;
+    private boolean gameOverScoreRecorded = false;
 
     public GamePanel(final GameEngine engine, final LeaderboardService leaderboardService) {
         this.engine = engine;
@@ -132,6 +134,18 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             handleKeyboardInput();
             engine.update();
             updateParticles();
+        } else if (!engine.isRunning() && !gameOverScoreRecorded) {
+            // Automatically record & push final score to local storage and Supabase cloud on game over
+            gameOverScoreRecorded = true;
+            Player p = engine.getPlayer();
+            if (p != null && leaderboardService != null) {
+                System.out.printf("[GamePanel] >>> MISSION OVER: Auto-submitting score %d for %s (Wave %d) to Supabase Cloud...%n",
+                        p.getScore(), p.getName(), engine.getCurrentWave());
+                leaderboardService.recordScore(p.getName(), p.getScore(), engine.getCurrentWave());
+                try {
+                    leaderboardService.saveLeaderboard();
+                } catch (Exception ignored) {}
+            }
         }
 
         updateStarfield();
@@ -590,13 +604,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         int finalScore = oldPlayer.getScore();
         int finalWave = engine.getCurrentWave();
 
-        // Save high score to leaderboard service
-        if (leaderboardService != null) {
-            leaderboardService.recordScore(pilotName, finalScore, finalWave);
-            try {
-                leaderboardService.saveLeaderboard();
-            } catch (Exception ignored) {}
-        }
+        // Score was already recorded via the gameOverScoreRecorded auto-trigger in actionPerformed().
+        // Do NOT call recordScore() here again — that caused duplicate Supabase submissions.
 
         engine.getPlayer().setHealth(100);
         engine.getPlayer().setShield(50);
@@ -612,6 +621,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         engine.setRunning(true);
         engine.spawnWave(4);
         paused = false;
+        gameOverScoreRecorded = false;
         pressedKeys.clear();
         particles.clear();
         engine.logEvent("[REBOOT] Fighter re-launched into combat orbit.");

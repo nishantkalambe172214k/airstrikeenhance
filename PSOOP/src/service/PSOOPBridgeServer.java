@@ -27,6 +27,8 @@ public class PSOOPBridgeServer {
     public static final int DEFAULT_PORT = 9092;
     private final int port;
     private GameEngine gameEngine;
+    private final LeaderboardService leaderboardService;
+    private boolean scoreSubmitted;
     private volatile boolean running;
 
     public PSOOPBridgeServer() {
@@ -36,7 +38,12 @@ public class PSOOPBridgeServer {
     public PSOOPBridgeServer(final int port) {
         this.port = port;
         this.gameEngine = new GameEngine("CadetPilot");
+        this.leaderboardService = new LeaderboardService();
+        this.scoreSubmitted = false;
         this.running = true;
+        try {
+            this.leaderboardService.loadLeaderboard();
+        } catch (Exception ignored) {}
     }
 
     public void start() {
@@ -162,6 +169,15 @@ public class PSOOPBridgeServer {
                     if (zf == 1 || sf == 1 || player.getHealth() <= 0) {
                         player.setHealth(0);
                         player.setActive(false);
+                        if (!scoreSubmitted) {
+                            scoreSubmitted = true;
+                            System.out.printf("[PSOOP SERVER] >>> Game Over Detected! Auto-submitting score %d for %s (Wave %d) to Supabase Cloud...%n",
+                                    player.getScore(), player.getName(), gameEngine.getCurrentWave());
+                            leaderboardService.recordScore(player.getName(), player.getScore(), gameEngine.getCurrentWave());
+                            try {
+                                leaderboardService.saveLeaderboard();
+                            } catch (Exception ignored) {}
+                        }
                     }
                 }
 
@@ -182,6 +198,7 @@ public class PSOOPBridgeServer {
             case "RESET": {
                 this.gameEngine = new GameEngine("CadetPilot");
                 this.gameEngine.spawnWave(4);
+                this.scoreSubmitted = false;
                 return "RESET_OK " + serializeState();
             }
 

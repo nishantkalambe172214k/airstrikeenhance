@@ -38,6 +38,16 @@ public class SwingGameLauncher {
                 System.err.println("[SwingGameLauncher] Note: Default leaderboards initialized.");
             }
 
+            // Asynchronously synchronize live Supabase cloud records at launch
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    boolean ok = leaderboardService.syncWithCloud();
+                    if (ok) {
+                        System.out.println("[SwingGameLauncher] >>> Supabase Cloud Live Leaderboard synchronized successfully.");
+                    }
+                } catch (Exception ignored) {}
+            });
+
             final GameEngine engine = new GameEngine("StarViper");
             engine.spawnWave(4);
 

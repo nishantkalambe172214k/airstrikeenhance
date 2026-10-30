@@ -115,6 +115,16 @@ public class LeaderboardDialog extends JDialog {
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(56, 189, 248, 80)));
         add(scrollPane, BorderLayout.CENTER);
 
+        // Bottom Container Panel
+        JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.setBackground(new Color(15, 23, 42));
+
+        // Live Cloud Connection Status Indicator
+        JLabel statusLabel = new JLabel("  ● Live Cloud: Syncing...", SwingConstants.LEFT);
+        statusLabel.setFont(new Font("Monospaced", Font.BOLD, 12));
+        statusLabel.setForeground(new Color(250, 204, 21)); // Gold/Yellow
+        southPanel.add(statusLabel, BorderLayout.WEST);
+
         // Button Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 10));
         buttonPanel.setBackground(new Color(15, 23, 42));
@@ -124,19 +134,7 @@ public class LeaderboardDialog extends JDialog {
         cloudSyncButton.setBackground(new Color(16, 185, 129));
         cloudSyncButton.setForeground(new Color(16, 185, 129));
         cloudSyncButton.setToolTipText("Synchronize scores with PostgreSQL on Supabase Cloud");
-        cloudSyncButton.addActionListener(e -> {
-            boolean ok = leaderboardService.syncWithCloud();
-            reloadData();
-            if (ok) {
-                javax.swing.JOptionPane.showMessageDialog(this,
-                        "Successfully synchronized with Supabase PostgreSQL Cloud!",
-                        "Cloud Sync Successful", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                javax.swing.JOptionPane.showMessageDialog(this,
-                        "Cloud server unreachable. Operating in local offline cache mode.",
-                        "Offline Mode", javax.swing.JOptionPane.WARNING_MESSAGE);
-            }
-        });
+        cloudSyncButton.addActionListener(e -> triggerAsyncCloudSync(cloudSyncButton, statusLabel, true));
         buttonPanel.add(cloudSyncButton);
 
         JButton refreshButton = new JButton("Refresh");
@@ -153,9 +151,46 @@ public class LeaderboardDialog extends JDialog {
         closeButton.addActionListener(e -> dispose());
         buttonPanel.add(closeButton);
 
-        add(buttonPanel, BorderLayout.SOUTH);
+        southPanel.add(buttonPanel, BorderLayout.EAST);
+        add(southPanel, BorderLayout.SOUTH);
 
         reloadData();
+
+        // Automatic background live sync upon opening leaderboard
+        triggerAsyncCloudSync(cloudSyncButton, statusLabel, false);
+    }
+
+    private void triggerAsyncCloudSync(final JButton syncButton, final JLabel statusLabel, final boolean showPopup) {
+        syncButton.setEnabled(false);
+        syncButton.setText("Syncing Cloud...");
+        statusLabel.setText("  ● Live Cloud: Syncing...");
+        statusLabel.setForeground(new Color(250, 204, 21));
+
+        java.util.concurrent.CompletableFuture.supplyAsync(() -> leaderboardService.syncWithCloud())
+                .thenAccept(ok -> {
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        syncButton.setEnabled(true);
+                        syncButton.setText("Sync Cloud (Supabase)");
+                        if (ok) {
+                            statusLabel.setText("  ● Live Cloud: Connected");
+                            statusLabel.setForeground(new Color(16, 185, 129));
+                            reloadData();
+                            if (showPopup) {
+                                javax.swing.JOptionPane.showMessageDialog(this,
+                                        "Successfully synchronized with Supabase PostgreSQL Cloud!\nLive records updated in Hall of Fame.",
+                                        "Cloud Sync Successful", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                            }
+                        } else {
+                            statusLabel.setText("  ● Live Cloud: Offline Mode");
+                            statusLabel.setForeground(new Color(239, 68, 68));
+                            if (showPopup) {
+                                javax.swing.JOptionPane.showMessageDialog(this,
+                                        "Cloud server unreachable. Operating in local offline cache mode.",
+                                        "Offline Mode", javax.swing.JOptionPane.WARNING_MESSAGE);
+                            }
+                        }
+                    });
+                });
     }
 
     public void reloadData() {

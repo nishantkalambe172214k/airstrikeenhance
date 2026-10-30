@@ -1,5 +1,6 @@
 package ui;
 
+import model.Player;
 import service.GameEngine;
 import service.LeaderboardService;
 
@@ -76,6 +77,14 @@ public class GameWindow extends JFrame {
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE);
             if (confirm == JOptionPane.YES_OPTION) {
+                // Ensure current mission score is persisted to local storage and Supabase
+                Player p = engine.getPlayer();
+                if (p != null && leaderboardService != null && p.getScore() > 0) {
+                    leaderboardService.recordScore(p.getName(), p.getScore(), engine.getCurrentWave());
+                    try {
+                        leaderboardService.saveLeaderboard();
+                    } catch (Exception ignored) {}
+                }
                 System.exit(0);
             }
         });
