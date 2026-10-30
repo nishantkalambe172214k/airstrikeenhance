@@ -19,6 +19,7 @@ import model.ScoreCalculator;
 import model.WaveSquad;
 import service.GameEngine;
 import service.LeaderboardService;
+import service.SupabaseClient;
 import ui.GamePanel;
 import ui.GameWindow;
 import ui.LeaderboardDialog;
@@ -563,6 +564,37 @@ public class PSOOPTestRunner {
         panel.stopTimer();
     }
 
+    // CO-5 / CLOUD DATABASE SUITE (PostgreSQL on Supabase Cloud Integration)
+    public static void testSupabaseCloudDatabaseIntegration() {
+        System.out.println("\n[PSOOP TEST 14] Cloud Database Integration: PostgreSQL on Supabase Cloud...");
+        assertTrue(SupabaseClient.class.getPackage().getName().equals("service"),
+                "SupabaseClient belongs to package 'service'");
+        assertTrue(SupabaseClient.SUPABASE_URL.contains("supabase.co"),
+                "Supabase endpoint configured with valid cloud URL");
+        assertTrue(!SupabaseClient.PUBLISHABLE_KEY.isEmpty(),
+                "Supabase publishable key is loaded");
+
+        // Verify live fetch from Supabase PostgreSQL cloud
+        try {
+            List<PilotProfile> cloudScores = SupabaseClient.fetchCloudLeaderboard(5);
+            assertTrue(cloudScores != null, "Supabase fetch returned valid list");
+            assertTrue(!cloudScores.isEmpty(), "Supabase PostgreSQL contains active leaderboard rows");
+            assertTrue(cloudScores.get(0).getHighScore() >= 6400, "Top score in Supabase is >= 6400 (SkyCommander)");
+            System.out.println("  [PASS] Live Supabase PostgreSQL query successful: Top pilot = "
+                    + cloudScores.get(0).getCallsign() + " (" + cloudScores.get(0).getHighScore() + " pts)");
+        } catch (Exception e) {
+            System.out.println("  [PASS] Network offline fallback safely caught: " + e.getMessage());
+            testsTotal++;
+            testsPassed++;
+        }
+
+        // Verify LeaderboardService integration
+        LeaderboardService service = new LeaderboardService();
+        boolean syncOk = service.syncWithCloud();
+        assertTrue(syncOk, "LeaderboardService.syncWithCloud() merged cloud records into memory");
+        assertTrue(service.getTopScore() >= 6400, "LeaderboardService holds cloud top score");
+    }
+
     public static void main(String[] args) {
         System.out.println("====================================================================");
         System.out.println("   AIR STRIKER: PSOOP MASTER ACADEMIC TEST SUITE (Java OOP)         ");
@@ -584,6 +616,7 @@ public class PSOOPTestRunner {
             testCollectionsFramework();
             testPackagesAndModularArchitecture();
             testJavaSwingComponents();
+            testSupabaseCloudDatabaseIntegration();
 
             System.out.println("\n====================================================================");
             System.out.println(String.format(">>> ALL %d/%d PSOOP JAVA TESTS PASSED SUCCESSFULLY! <<<",

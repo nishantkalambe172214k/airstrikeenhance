@@ -129,13 +129,61 @@ public class LeaderboardService {
     }
 
     /**
+     * Synchronizes local leaderboard with Supabase Cloud PostgreSQL.
+     * Fetches top global high scores and merges them into memory and local CSV.
+     * @return true if cloud sync succeeded, false if offline/fallback.
+     */
+    public boolean syncWithCloud() {
+        try {
+            List<PilotProfile> cloudProfiles = SupabaseClient.fetchCloudLeaderboard(25);
+            if (cloudProfiles == null || cloudProfiles.isEmpty()) {
+                return false;
+            }
+
+            for (PilotProfile cloudP : cloudProfiles) {
+                final String key = cloudP.getCallsign().toUpperCase();
+                Integer localScore = highScoresByCallsign.get(key);
+
+                if (localScore == null) {
+                    profiles.add(cloudP);
+                    profilesById.put(cloudP.getPlayerId(), cloudP);
+                    highScoresByCallsign.put(key, cloudP.getHighScore());
+                } else if (cloudP.getHighScore() > localScore) {
+                    highScoresByCallsign.put(key, cloudP.getHighScore());
+                    for (PilotProfile localP : profiles) {
+                        if (localP.getCallsign().equalsIgnoreCase(cloudP.getCallsign())) {
+                            localP.updateHighScore(cloudP.getHighScore());
+                            localP.setHighestWave(cloudP.getHighestWave());
+                            break;
+                        }
+                    }
+                }
+            }
+
+            Collections.sort(profiles);
+            try {
+                saveLeaderboard();
+            } catch (GameException ignored) {
+            }
+            return true;
+        } catch (Exception e) {
+            System.err.println("[LeaderboardService WARNING] Cloud sync failed (offline mode): " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Records or updates a pilot's mission result.
      * Uses Collections: Map lookup and List update, then re-sorts.
+     * Asynchronously dispatches the score to Supabase PostgreSQL cloud.
      */
     public boolean recordScore(final String callsign, final int score, final int wave) {
         if (callsign == null || callsign.trim().isEmpty() || score < 0) {
             return false;
         }
+
+        // Asynchronously dispatch score to Supabase PostgreSQL cloud in background
+        SupabaseClient.submitScoreAsync(callsign, score, wave);
 
         final String key = callsign.trim().toUpperCase();
         Integer existingScore = highScoresByCallsign.get(key);

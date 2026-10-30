@@ -168,7 +168,7 @@ int AreaFill::floodFill4Explicit(PixelBuffer& buffer, int seedX, int seedY,
     }
 
     int filledCount = 0;
-    // 4-connected orthogonal neighbor offsets: Right, Left, Up, Down
+    // dhruv 4-connected orthogonal neighbor offsets: Right, Left, Up, Down
     const int dx[4] = { 1, -1, 0, 0 };
     const int dy[4] = { 0, 0, 1, -1 };
 
@@ -232,7 +232,7 @@ int AreaFill::boundaryFill4(PixelBuffer& buffer, int seedX, int seedY,
         stack.pop_back();
         filledCount++;
 
-        // [CGL CO-3] Boundary check: pixel != boundaryColor && pixel != fillColor
+        // dhruv-[CGL CO-3] Boundary check: pixel != boundaryColor && pixel != fillColor
         for (int i = 0; i < 4; ++i) {
             int nx = pt.x + dx[i];
             int ny = pt.y + dy[i];

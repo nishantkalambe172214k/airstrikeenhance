@@ -1,4 +1,7 @@
 Rank,PlayerID,Callsign,Score,WaveReached,Date
-1,1003,SkyCommander,6400,6,2026-09-03
-2,1001,StarViper,3500,4,2026-09-01
-3,1002,AcesHigh,2800,3,2026-09-02
+1,5,NovaPilot,7200,7,2026-10-29
+2,1,SkyCommander,6400,6,2026-10-29
+3,2,StarViper,3500,4,2026-10-29
+4,3,AcesHigh,2800,3,2026-10-29
+5,4,TestPilot,1200,2,2026-10-29
+6,6,SwingTester,0,2,2026-10-29

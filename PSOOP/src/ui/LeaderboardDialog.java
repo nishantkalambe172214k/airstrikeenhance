@@ -119,6 +119,26 @@ public class LeaderboardDialog extends JDialog {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 10));
         buttonPanel.setBackground(new Color(15, 23, 42));
 
+        JButton cloudSyncButton = new JButton("Sync Cloud (Supabase)");
+        cloudSyncButton.setFont(new Font("SansSerif", Font.BOLD, 12));
+        cloudSyncButton.setBackground(new Color(16, 185, 129));
+        cloudSyncButton.setForeground(new Color(16, 185, 129));
+        cloudSyncButton.setToolTipText("Synchronize scores with PostgreSQL on Supabase Cloud");
+        cloudSyncButton.addActionListener(e -> {
+            boolean ok = leaderboardService.syncWithCloud();
+            reloadData();
+            if (ok) {
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Successfully synchronized with Supabase PostgreSQL Cloud!",
+                        "Cloud Sync Successful", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                javax.swing.JOptionPane.showMessageDialog(this,
+                        "Cloud server unreachable. Operating in local offline cache mode.",
+                        "Offline Mode", javax.swing.JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        buttonPanel.add(cloudSyncButton);
+
         JButton refreshButton = new JButton("Refresh");
         refreshButton.setFont(new Font("SansSerif", Font.BOLD, 12));
         refreshButton.setBackground(new Color(30, 41, 59));
